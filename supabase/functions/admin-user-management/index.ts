@@ -74,17 +74,17 @@ Deno.serve(async (req: Request) => {
 
         if (userError) throw userError
 
+        // Extract the users array from the result
+        const result = userData?.[0] || { users: [], total: 0 }
+
         // Log admin action
         await supabaseClient.rpc('log_admin_action', {
           action_type: 'user_list_viewed',
           action_details: { search, limit, offset }
         })
 
-        // Extract the users array from the result
-        const result = userData?.[0] || { users: [], total: 0 }
-
         return new Response(
-          JSON.stringify(result),
+          JSON.stringify(result.users || []),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200 

@@ -57,76 +57,17 @@ Deno.serve(async (req: Request) => {
     // Parse request body
     const { refresh = false }: StatsRequest = await req.json()
 
-    // Check cache first (unless refresh is requested)
-    if (!refresh) {
-      const { data: cachedStats, error: cacheError } = await supabaseClient
-        .from('admin_stats_cache')
-        .select('data, expires_at')
-        .eq('stat_type', 'dashboard_stats')
-        .single()
+    // Get admin stats using the database function
+    const { data: stats, error: statsError } = await supabaseClient
+      .rpc('get_admin_stats')
 
-      if (!cacheError && cachedStats && new Date(cachedStats.expires_at) > new Date()) {
-        return new Response(
-          JSON.stringify(cachedStats.data),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200 
-          }
-        )
-      }
-    }
+    if (statsError) throw statsError
 
-    // Calculate fresh stats
-    const now = new Date()
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-
-    // Get total users count
-    const { count: totalUsers, error: totalUsersError } = await supabaseClient
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-
-    if (totalUsersError) throw totalUsersError
-
-    // Get new users in last 30 days
-    const { count: newUsers, error: newUsersError } = await supabaseClient
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', thirtyDaysAgo.toISOString())
-
-    if (newUsersError) throw newUsersError
-
-    // Get premium users count
-    const { count: premiumUsers, error: premiumUsersError } = await supabaseClient
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_premium', true)
-
-    if (premiumUsersError) throw premiumUsersError
-
-    // Get active users (users who signed in within last 7 days)
+    // Get additional data for dashboard
     const { data: activeUsersData, error: activeUsersError } = await supabaseClient
       .rpc('get_active_users_count', { days_back: 7 })
 
     const activeUsers = activeUsersError ? 0 : (activeUsersData || 0)
-
-    // Get pending reports count
-    const { count: pendingReports, error: pendingReportsError } = await supabaseClient
-      .from('user_reports')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'pending')
-
-    if (pendingReportsError) throw pendingReportsError
-
-    // Get system errors in last 24 hours
-    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-    const { count: systemErrors, error: systemErrorsError } = await supabaseClient
-      .from('system_logs')
-      .select('*', { count: 'exact', head: true })
-      .eq('level', 'error')
-      .gte('created_at', twentyFourHoursAgo.toISOString())
-
-    if (systemErrorsError) throw systemErrorsError
 
     // Get user growth data for chart (last 30 days)
     const { data: userGrowthData, error: userGrowthError } = await supabaseClient
@@ -167,27 +108,19 @@ Deno.serve(async (req: Request) => {
       return activity
     }))
 
-    const stats = {
-      totalUsers: totalUsers || 0,
-      newUsers: newUsers || 0,
-      premiumUsers: premiumUsers || 0,
+    const finalStats = {
+      totalUsers: stats.total_users || 0,
+      confirmedUsers: stats.confirmed_users || 0,
+      unconfirmedUsers: stats.unconfirmed_users || 0,
+      newUsers: stats.new_users_month || 0,
+      premiumUsers: stats.premium_users || 0,
       activeUsers: activeUsers || 0,
-      pendingReports: pendingReports || 0,
-      systemErrors: systemErrors || 0,
+      pendingReports: stats.pending_reports || 0,
+      systemErrors: stats.recent_errors || 0,
       userGrowth: userGrowth,
       recentActivity: enrichedActivity,
-      lastUpdated: now.toISOString()
+      lastUpdated: stats.updated_at || new Date().toISOString()
     }
-
-    // Cache the stats (expires in 5 minutes)
-    const expiresAt = new Date(now.getTime() + 5 * 60 * 1000)
-    await supabaseClient
-      .from('admin_stats_cache')
-      .upsert({
-        stat_type: 'dashboard_stats',
-        data: stats,
-        expires_at: expiresAt.toISOString()
-      })
 
     // Log admin action
     await supabaseClient.rpc('log_admin_action', {
@@ -196,7 +129,7 @@ Deno.serve(async (req: Request) => {
     })
 
     return new Response(
-      JSON.stringify(stats),
+      JSON.stringify(finalStats),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
