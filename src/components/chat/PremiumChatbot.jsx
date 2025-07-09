@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Send, Crown, User, Loader2, Sparkles } from 'lucide-react';
 
-export default function PremiumChatbot({ messages, onSendMessage, loading }) {
+export default function PremiumChatbot({ messages, onSendMessage, loading, isAdmin = false }) {
   const [message, setMessage] = useState('');
   const messagesEndRef = useRef(null);
   const { subscription } = useSubscription();
@@ -47,16 +47,20 @@ export default function PremiumChatbot({ messages, onSendMessage, loading }) {
         <div className="p-4 border-b border-slate-600 bg-gradient-to-r from-yellow-900/30 to-orange-900/30">
           <div className="flex items-center space-x-3">
             <Avatar className="w-10 h-10">
-              <AvatarFallback className="bg-yellow-600 text-white">
-                <Crown className="w-5 h-5" />
+              <AvatarFallback className={isAdmin ? "bg-red-600 text-white" : "bg-yellow-600 text-white"}>
+                {isAdmin ? <Shield className="w-5 h-5" /> : <Crown className="w-5 h-5" />}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h3 className="text-white font-semibold flex items-center">
-                <Crown className="w-4 h-4 mr-2 text-yellow-400" />
-                SardAI Premium
+              {isAdmin ? <Shield className="w-16 h-16 text-red-400 mx-auto mb-4" /> : <Crown className="w-16 h-16 text-yellow-400 mx-auto mb-4" />}
+                {isAdmin ? <Shield className="w-4 h-4 mr-2 text-red-400" /> : <Crown className="w-4 h-4 mr-2 text-yellow-400" />}
+                {isAdmin ? 'Benvenuto Admin! Accesso completo attivo 🛡️' : 'Salude! Deo so SardAI Premium! 👑'}
               </h3>
-              <p className="text-gray-400 text-sm">Chat in lingua sarda autentica</p>
+                {isAdmin ? 
+                  'Come amministratore hai accesso a tutte le funzionalità avanzate di SardAI.' :
+                  'Oe, comente ses? Deo so inoghe pro ti agiudare in limba sarda auténtica. Ite boles ischire de sa Sardigna nostra?'
+                }
+              </p>
             </div>
           </div>
         </div>
@@ -161,14 +165,17 @@ export default function PremiumChatbot({ messages, onSendMessage, loading }) {
             }`}>
               <Avatar className="w-8 h-8 flex-shrink-0">
                 <AvatarFallback className={msg.role === 'user' ? 'bg-green-600' : 'bg-yellow-600'}>
-                  {msg.role === 'user' ? <User className="w-4 h-4" /> : <Crown className="w-4 h-4" />}
+                  {msg.role === 'user' ? <User className="w-4 h-4" /> : 
+                   isAdmin ? <Shield className="w-4 h-4" /> : <Crown className="w-4 h-4" />}
                 </AvatarFallback>
               </Avatar>
               
               <Card className={`px-4 py-3 ${
                 msg.role === 'user' 
                   ? 'chat-bubble-user text-white border-0' 
-                  : 'bg-gradient-to-r from-yellow-900/20 to-orange-900/20 text-white border border-yellow-500/20'
+                  : isAdmin ? 
+                    'bg-gradient-to-r from-red-900/20 to-red-800/20 text-white border border-red-500/20' :
+                    'bg-gradient-to-r from-yellow-900/20 to-orange-900/20 text-white border border-yellow-500/20'
               }`}>
                 <div 
                   className="text-sm leading-relaxed"
@@ -193,15 +200,21 @@ export default function PremiumChatbot({ messages, onSendMessage, loading }) {
           >
             <div className="flex items-start space-x-3">
               <Avatar className="w-8 h-8">
-                <AvatarFallback className="bg-yellow-600">
-                  <Crown className="w-4 h-4" />
+                <AvatarFallback className={isAdmin ? "bg-red-600" : "bg-yellow-600"}>
+                  {isAdmin ? <Shield className="w-4 h-4" /> : <Crown className="w-4 h-4" />}
                 </AvatarFallback>
               </Avatar>
               
-              <Card className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 text-white border border-yellow-500/20 px-4 py-3">
+              <Card className={`px-4 py-3 text-white border ${
+                isAdmin ? 
+                  'bg-gradient-to-r from-red-900/20 to-red-800/20 border-red-500/20' :
+                  'bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border-yellow-500/20'
+              }`}>
                 <div className="flex items-center space-x-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm">SardAI est pensende...</span>
+                  <span className="text-sm">
+                    {isAdmin ? 'SardAI Admin sta elaborando...' : 'SardAI est pensende...'}
+                  </span>
                 </div>
               </Card>
             </div>
@@ -212,19 +225,30 @@ export default function PremiumChatbot({ messages, onSendMessage, loading }) {
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-slate-600 bg-gradient-to-r from-yellow-900/10 to-orange-900/10">
+      <div className={`p-4 border-t border-slate-600 ${
+        isAdmin ? 
+          'bg-gradient-to-r from-red-900/10 to-red-800/10' :
+          'bg-gradient-to-r from-yellow-900/10 to-orange-900/10'
+      }`}>
         <form onSubmit={handleSubmit} className="flex space-x-2">
           <Input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Iscrie su messàgiu tuo in sardu..."
+            placeholder={isAdmin ? "Scrivi il tuo messaggio..." : "Iscrie su messàgiu tuo in sardu..."}
             disabled={loading}
-            className="bg-slate-800/50 border-yellow-500/30 text-white placeholder:text-gray-400 focus:border-yellow-400"
+            className={`bg-slate-800/50 text-white placeholder:text-gray-400 ${
+              isAdmin ? 
+                'border-red-500/30 focus:border-red-400' :
+                'border-yellow-500/30 focus:border-yellow-400'
+            }`}
           />
           <Button
             type="submit"
             disabled={!message.trim() || loading}
-            className="bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700"
+            className={isAdmin ? 
+              "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800" :
+              "bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700"
+            }
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -235,8 +259,11 @@ export default function PremiumChatbot({ messages, onSendMessage, loading }) {
         </form>
         
         <div className="mt-2 text-xs text-yellow-400 text-center">
-          <Crown className="w-3 h-3 inline mr-1" />
-          Modalità Premium Attiva - Chat in lingua sarda autentica
+          {isAdmin ? <Shield className="w-3 h-3 inline mr-1" /> : <Crown className="w-3 h-3 inline mr-1" />}
+          {isAdmin ? 
+            'Modalità Admin Attiva - Accesso completo alle funzionalità' :
+            'Modalità Premium Attiva - Chat in lingua sarda autentica'
+          }
         </div>
       </div>
     </div>

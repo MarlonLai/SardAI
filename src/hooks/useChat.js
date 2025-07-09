@@ -9,7 +9,7 @@ export const useChat = () => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [planStatus, setPlanStatus] = useState(null);
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
 
   // Fetch user plan status
@@ -152,7 +152,7 @@ export const useChat = () => {
       console.error('Error creating session:', error);
       toast({
         title: "Errore",
-        description: "Impossibile creare una nuova sessione di chat.",
+        description: error.message || "Impossibile creare una nuova sessione di chat.",
         variant: "destructive",
       });
       return null;

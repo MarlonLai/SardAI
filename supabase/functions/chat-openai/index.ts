@@ -91,17 +91,32 @@ Deno.serve(async (req: Request) => {
       throw new Error('Message and chat type are required')
     }
 
-    // Check user plan status
-    const { data: planStatus, error: planError } = await supabaseClient
-      .rpc('get_user_plan_status', { user_uuid: user.id })
+    // Get user profile to check admin status
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
 
-    if (planError) throw planError
+    if (profileError) {
+      console.error('Error fetching profile:', profileError)
+    }
 
-    const userPlan = planStatus[0]
-    
-    // Validate access to premium chat
-    if (chatType === 'premium' && !userPlan.can_use_premium) {
-      throw new Error('Premium access required. Please upgrade your plan or check your trial status.')
+    const isAdmin = profile?.role === 'admin'
+
+    // Check user plan status (skip for admin)
+    let userPlan = null
+    if (!isAdmin) {
+      const { data: planStatus, error: planError } = await supabaseClient
+        .rpc('get_user_plan_status', { user_uuid: user.id })
+
+      if (planError) throw planError
+      userPlan = planStatus[0]
+      
+      // Validate access to premium chat
+      if (chatType === 'premium' && !userPlan.can_use_premium) {
+        throw new Error('Premium access required. Please upgrade your plan or check your trial status.')
+      }
     }
 
     // Create or get session
@@ -166,7 +181,7 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         model: 'gpt-4',
         messages: messages,
-        max_tokens: chatType === 'premium' ? 1000 : 500,
+        max_tokens: chatType === 'premium' || isAdmin ? 1000 : 500,
         temperature: 0.8,
         stream: false
       }),

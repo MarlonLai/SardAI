@@ -22,7 +22,8 @@ import {
   Sparkles,
   Plus,
   Trash2,
-  Calendar
+  Calendar,
+  Shield
 } from 'lucide-react';
 
 export default function ChatPage() {
@@ -92,7 +93,9 @@ export default function ChatPage() {
   const freeSessions = sessions.filter(s => s.chat_type === 'free');
   const premiumSessions = sessions.filter(s => s.chat_type === 'premium');
 
-  const canUsePremium = subscription?.isActive || profile?.role === 'admin';
+  // Determine access levels
+  const isAdmin = profile?.role === 'admin';
+  const canUsePremium = subscription?.isActive || isAdmin || (planStatus?.can_use_premium);
 
   return (
     <>
@@ -149,37 +152,48 @@ export default function ChatPage() {
                     className="w-full justify-start border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    <Crown className="w-4 h-4 mr-1" />
-                    Nuova Chat Premium
+                    {isAdmin ? <Shield className="w-4 h-4 mr-1" /> : <Crown className="w-4 h-4 mr-1" />}
+                    Nuova Chat {isAdmin ? 'Admin' : 'Premium'}
                   </Button>
                 )}
               </div>
             </div>
 
-            {/* Subscription Status */}
-            {subscription && (
-              <div className="p-4 border-b border-white/10">
-                <div className="bg-slate-800/50 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-300">Piano Attuale</span>
-                    <span className={`text-sm font-semibold ${
-                      subscription.isActive ? 'text-yellow-400' : 'text-blue-400'
-                    }`}>
-                      {subscription.isActive ? 'Premium' : 'Gratuito'}
-                    </span>
-                  </div>
-                  
-                  {subscription.isActive && subscription.current_period_end && (
-                    <div className="flex items-center space-x-2 text-xs text-gray-400">
-                      <Calendar className="w-3 h-3" />
-                      <span>
-                        Rinnovo: {new Date(subscription.current_period_end * 1000).toLocaleDateString('it-IT')}
-                      </span>
-                    </div>
-                  )}
+            {/* User Status */}
+            <div className="p-4 border-b border-white/10">
+              <div className="bg-slate-800/50 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-300">Stato Account</span>
+                  <span className={`text-sm font-semibold ${
+                    isAdmin ? 'text-red-400' : 
+                    subscription?.isActive || planStatus?.can_use_premium ? 'text-yellow-400' : 'text-blue-400'
+                  }`}>
+                    {isAdmin ? 'Admin' : 
+                     subscription?.isActive ? 'Premium' : 
+                     planStatus?.plan === 'trial' && !planStatus?.trial_expired ? 'Prova Gratuita' : 'Gratuito'}
+                  </span>
                 </div>
+                
+                {planStatus && (
+                  <div className="text-xs text-gray-400">
+                    {planStatus.plan === 'trial' && !planStatus.trial_expired && (
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="w-3 h-3" />
+                        <span>Prova: {planStatus.trial_days_left} giorni rimasti</span>
+                      </div>
+                    )}
+                    {subscription?.isActive && subscription.current_period_end && (
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="w-3 h-3" />
+                        <span>
+                          Rinnovo: {new Date(subscription.current_period_end * 1000).toLocaleDateString('it-IT')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Sessions List */}
             <div className="flex-1 overflow-y-auto">
@@ -231,8 +245,8 @@ export default function ChatPage() {
               {premiumSessions.length > 0 && (
                 <div className="p-4">
                   <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center">
-                    <Crown className="w-4 h-4 mr-2 text-yellow-400" />
-                    Chat Premium ({premiumSessions.length})
+                    {isAdmin ? <Shield className="w-4 h-4 mr-2 text-red-400" /> : <Crown className="w-4 h-4 mr-2 text-yellow-400" />}
+                    Chat {isAdmin ? 'Admin' : 'Premium'} ({premiumSessions.length})
                   </h3>
                   <div className="space-y-2">
                     {premiumSessions.map((session) => (
@@ -240,7 +254,7 @@ export default function ChatPage() {
                         key={session.id}
                         className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
                           currentSession === session.id
-                            ? 'bg-yellow-600/20 border border-yellow-500/30'
+                            ? isAdmin ? 'bg-red-600/20 border border-red-500/30' : 'bg-yellow-600/20 border border-yellow-500/30'
                             : 'hover:bg-slate-800/50'
                         }`}
                         onClick={() => handleSelectSession(session.id)}
@@ -306,8 +320,8 @@ export default function ChatPage() {
                       <span>Modalità Gratuita</span>
                     </TabsTrigger>
                     <TabsTrigger value="premium" className="flex items-center space-x-2">
-                      <Crown className="w-4 h-4" />
-                      <span>Modalità Premium</span>
+                      {isAdmin ? <Shield className="w-4 h-4" /> : <Crown className="w-4 h-4" />}
+                      <span>Modalità {isAdmin ? 'Admin' : 'Premium'}</span>
                       {!canUsePremium && (
                         <span className="ml-1 px-2 py-1 text-xs bg-yellow-500 text-black rounded-full">
                           Upgrade
@@ -331,6 +345,7 @@ export default function ChatPage() {
                     messages={currentSessionMessages}
                     onSendMessage={sendMessage}
                     loading={loading}
+                    isAdmin={isAdmin}
                   />
                 </TabsContent>
               </Tabs>
@@ -352,8 +367,10 @@ export default function ChatPage() {
                   </h2>
                   
                   <p className="text-gray-300 mb-8">
-                    Seleziona una chat esistente dalla barra laterale o creane una nuova 
-                    per iniziare a conversare con il tuo assistente sardo preferito.
+                    {isAdmin ? 
+                      "Come amministratore hai accesso completo a tutte le funzionalità di chat." :
+                      "Seleziona una chat esistente dalla barra laterale o creane una nuova per iniziare a conversare con il tuo assistente sardo preferito."
+                    }
                   </p>
 
                   <div className="space-y-3">
@@ -369,10 +386,14 @@ export default function ChatPage() {
                       <Button
                         onClick={() => handleNewChat('premium')}
                         variant="outline"
-                        className="w-full border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
+                        className={`w-full ${
+                          isAdmin ? 
+                            'border-red-500/50 text-red-400 hover:bg-red-500/10' :
+                            'border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10'
+                        }`}
                       >
-                        <Crown className="w-4 h-4 mr-2" />
-                        Inizia Chat Premium
+                        {isAdmin ? <Shield className="w-4 h-4 mr-2" /> : <Crown className="w-4 h-4 mr-2" />}
+                        Inizia Chat {isAdmin ? 'Admin' : 'Premium'}
                       </Button>
                     )}
                   </div>
