@@ -15,17 +15,23 @@ import {
 export default function AdminStats() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchStats();
   }, []);
 
-  const fetchStats = async () => {
+  const fetchStats = async (refresh = false) => {
     try {
-      setLoading(true);
+      if (refresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      
       const { data, error } = await supabase.functions.invoke('admin-stats', {
-        body: {}
+        body: { refresh }
       });
 
       if (error) throw error;
@@ -37,7 +43,11 @@ export default function AdminStats() {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (refresh) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -60,45 +70,39 @@ export default function AdminStats() {
   const statCards = [
     {
       title: "Utenti Totali",
-      value: stats.total_users,
+      value: stats.totalUsers,
       icon: Users,
       color: "text-blue-400"
     },
     {
-      title: "Utenti Confermati",
-      value: stats.confirmed_users,
-      icon: UserCheck,
+      title: "Nuovi Utenti",
+      value: stats.newUsers,
+      icon: TrendingUp,
       color: "text-green-400"
     },
     {
-      title: "Non Confermati",
-      value: stats.unconfirmed_users,
-      icon: UserX,
+      title: "Utenti Premium",
+      value: stats.premiumUsers,
+      icon: Crown,
       color: "text-yellow-400"
     },
     {
-      title: "Attivi (30gg)",
-      value: stats.active_users_month,
+      title: "Attivi (7gg)",
+      value: stats.activeUsers,
       icon: Activity,
       color: "text-purple-400"
     },
     {
-      title: "Nuovi Oggi",
-      value: stats.new_users_today,
-      icon: Calendar,
+      title: "Segnalazioni",
+      value: stats.pendingReports,
+      icon: Flag,
       color: "text-cyan-400"
     },
     {
-      title: "Nuovi (7gg)",
-      value: stats.new_users_week,
-      icon: TrendingUp,
+      title: "Errori Sistema",
+      value: stats.systemErrors,
+      icon: AlertTriangle,
       color: "text-orange-400"
-    },
-    {
-      title: "Nuovi (30gg)",
-      value: stats.new_users_month,
-      icon: Clock,
-      color: "text-pink-400"
     }
   ];
 
@@ -106,19 +110,31 @@ export default function AdminStats() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white">Statistiche Utenti</h2>
-        <p className="text-gray-400 text-sm">
-          Ultimo aggiornamento: {new Date(stats.updated_at).toLocaleString('it-IT')}
-        </p>
+        <div className="flex items-center space-x-4">
+          <p className="text-gray-400 text-sm">
+            Ultimo aggiornamento: {stats.lastUpdated ? new Date(stats.lastUpdated).toLocaleString('it-IT') : 'Mai'}
+          </p>
+          <Button
+            onClick={() => fetchStats(true)}
+            variant="outline"
+            size="sm"
+            disabled={refreshing}
+            className="border-white/20 text-white hover:bg-white/10"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Aggiornamento...' : 'Aggiorna'}
+          </Button>
+        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((stat, index) => (
           <Card key={index} className="sardinian-card">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-2">
                 <div>
                   <p className="text-gray-400 text-sm font-medium">{stat.title}</p>
-                  <p className="text-3xl font-bold text-white mt-2">{stat.value}</p>
+                  <p className="text-3xl font-bold text-white mt-1">{stat.value}</p>
                 </div>
                 <stat.icon className={`w-8 h-8 ${stat.color}`} />
               </div>
@@ -128,29 +144,7 @@ export default function AdminStats() {
       </div>
 
       {/* Additional Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="sardinian-card">
-          <CardHeader>
-            <CardTitle className="text-white">Tasso di Conferma</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-300">Confermati</span>
-                <span className="text-green-400 font-bold">
-                  {((stats.confirmed_users / stats.total_users) * 100).toFixed(1)}%
-                </span>
-              </div>
-              <div className="w-full bg-slate-700 rounded-full h-2">
-                <div 
-                  className="bg-green-400 h-2 rounded-full" 
-                  style={{ width: `${(stats.confirmed_users / stats.total_users) * 100}%` }}
-                ></div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="sardinian-card">
           <CardHeader>
             <CardTitle className="text-white">Crescita Utenti</CardTitle>
@@ -158,17 +152,64 @@ export default function AdminStats() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-gray-300">Crescita Settimanale</span>
+                <span className="text-gray-300">Nuovi (30gg)</span>
                 <span className="text-blue-400 font-bold">
-                  +{stats.new_users_week}
+                  +{stats.newUsers}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-300">Crescita Mensile</span>
+                <span className="text-gray-300">Attivi</span>
                 <span className="text-purple-400 font-bold">
-                  +{stats.new_users_month}
+                  {stats.activeUsers}
                 </span>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="sardinian-card">
+          <CardHeader>
+            <CardTitle className="text-white">Premium Stats</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-300">Utenti Premium</span>
+                <span className="text-yellow-400 font-bold">
+                  {stats.premiumUsers}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-300">Tasso Conversione</span>
+                <span className="text-green-400 font-bold">
+                  {stats.totalUsers > 0 ? ((stats.premiumUsers / stats.totalUsers) * 100).toFixed(1) : 0}%
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="sardinian-card">
+          <CardHeader>
+            <CardTitle className="text-white">Attività Recente</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {stats.recentActivity?.slice(0, 3).map((activity, index) => (
+                <div key={index} className="flex items-center space-x-3 text-sm">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  <div className="flex-1">
+                    <p className="text-gray-300">{activity.action}</p>
+                    <p className="text-gray-500 text-xs">
+                      {new Date(activity.created_at).toLocaleString('it-IT')}
+                    </p>
+                  </div>
+                </span>
+              </div>
+              ))}
+              {(!stats.recentActivity || stats.recentActivity.length === 0) && (
+                <p className="text-gray-400 text-sm">Nessuna attività recente</p>
+              )}
             </div>
           </CardContent>
         </Card>

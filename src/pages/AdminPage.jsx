@@ -9,6 +9,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import AdminStats from '@/components/admin/AdminStats';
 import UserManagementPanel from '@/components/admin/UserManagementPanel';
 import ReportsPanel from '@/components/admin/ReportsPanel';
+import StorageManagement from '@/components/admin/StorageManagement';
+import DatabaseManagement from '@/components/admin/DatabaseManagement';
 import SystemLogsPanel from '@/components/admin/SystemLogsPanel';
 import Sidebar from '@/components/Sidebar';
 import { 
@@ -18,7 +20,9 @@ import {
   BarChart3,
   Users,
   Flag,
-  FileText
+  FileText,
+  HardDrive,
+  Database
 } from 'lucide-react';
 
 
@@ -136,20 +140,40 @@ export default function AdminPage() {
                     </TabsTrigger>
                     <TabsTrigger value="logs" className="flex items-center space-x-2">
                       <FileText className="w-4 h-4" />
+                      <span>Log Sistema</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="storage" className="flex items-center space-x-2">
+                      <HardDrive className="w-4 h-4" />
+                      <span>Storage</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="database" className="flex items-center space-x-2">
+                      <Database className="w-4 h-4" />
+                      <span>Database</span>
+                    </TabsTrigger>
+                  </TabsList>
+
                   <TabsContent value="stats">
                     <AdminStats />
                   </TabsContent>
-                      <span>Log Sistema</span>
+                  
                   <TabsContent value="users">
                     <UserManagementPanel />
                   </TabsContent>
-                    </TabsTrigger>
+                  
                   <TabsContent value="reports">
                     <ReportsPanel />
                   </TabsContent>
-                  </TabsList>
+                  
                   <TabsContent value="logs">
                     <SystemLogsPanel />
+                  </TabsContent>
+                  
+                  <TabsContent value="storage">
+                    <StorageManagement />
+                  </TabsContent>
+                  
+                  <TabsContent value="database">
+                    <DatabaseManagement />
                   </TabsContent>
                 </Tabs>
               </motion.div>
