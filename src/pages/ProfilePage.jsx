@@ -18,7 +18,8 @@ import {
   Calendar, 
   Crown, 
   Camera,
-  Save
+  Save,
+  Shield
 } from 'lucide-react';
 
 export default function ProfilePage() {
