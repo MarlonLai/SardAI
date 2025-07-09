@@ -1,179 +1,118 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import { useChat } from '@/hooks/useChat';
+import { useStripe } from '@/hooks/useStripe';
 import Sidebar from '@/components/Sidebar';
+import FreeChatbot from '@/components/chat/FreeChatbot';
+import PremiumChatbot from '@/components/chat/PremiumChatbot';
+import UpgradeButton from '@/components/chat/UpgradeButton';
 import { 
-  Send, 
+  ArrowLeft, 
   Menu,
   MessageCircle, 
   Crown,
   Sparkles,
-  Download,
-  Trash2
+  Plus,
+  Trash2,
+  Calendar
 } from 'lucide-react';
 
 export default function ChatPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, profile } = useAuth();
   const { toast } = useToast();
-  const [message, setMessage] = useState('');
+  const { handlePaymentSuccess, handlePaymentCanceled } = useStripe();
   const [activeTab, setActiveTab] = useState('free');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [messages, setMessages] = useState({
-    free: [
-      {
-        id: 1,
-        type: 'ai',
-        content: 'Ciao! Sono il tuo assistente SardAI! Come stai? Dimmi, cosa ti va di sapere sulla nostra bella Sardegna? 😊',
-        timestamp: new Date()
-      }
-    ],
-    premium: [
-      {
-        id: 1,
-        type: 'ai',
-        content: (profile?.is_premium || profile?.role === 'admin')
-          ? 'Salude! Deo so su assistente SardAI. Comente ses? Ite boles ischire de sa Sardigna nostra? 🌊'
-          : 'Per accedere alla modalità premium e conversare in lingua sarda autentica, aggiorna il tuo abbonamento.',
-        timestamp: new Date()
-      }
-    ]
-  });
-  const messagesEndRef = useRef(null);
+  
+  const {
+    sessions,
+    currentSession,
+    messages,
+    loading,
+    planStatus,
+    sendMessage,
+    createSession,
+    deleteSession,
+    selectSession,
+    fetchPlanStatus
+  } = useChat();
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // Handle payment status from URL params
   useEffect(() => {
-    // Update premium message based on user status
-    if (profile) {
-      setMessages(prev => ({
-        ...prev,
-        premium: [
-          {
-            id: 1,
-            type: 'ai',
-            content: (profile?.is_premium || profile?.role === 'admin')
-              ? 'Salude! Deo so su assistente SardAI. Comente ses? Ite boles ischire de sa Sardigna nostra? 🌊'
-              : 'Per accedere alla modalità premium e conversare in lingua sarda autentica, aggiorna il tuo abbonamento.',
-            timestamp: new Date()
-          }
-        ]
-      }));
+    const paymentStatus = searchParams.get('payment');
+    if (paymentStatus === 'success') {
+      handlePaymentSuccess();
+      fetchPlanStatus(); // Refresh plan status
+      // Clean URL
+      navigate('/chat', { replace: true });
+    } else if (paymentStatus === 'canceled') {
+      handlePaymentCanceled();
+      // Clean URL
+      navigate('/chat', { replace: true });
     }
-  }, [profile]);
+  }, [searchParams, handlePaymentSuccess, handlePaymentCanceled, navigate, fetchPlanStatus]);
 
+  // Auto-switch to premium tab if user has access
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const handleSendMessage = async () => {
-    if (!message.trim()) return;
-
-    // Admin has access to all features, otherwise check premium status
-    if (activeTab === 'premium' && !profile?.is_premium && profile?.role !== 'admin') {
-      toast({
-        title: "Abbonamento Premium Richiesto",
-        description: "Aggiorna il tuo abbonamento per accedere alla modalità sarda autentica",
-        variant: "destructive"
-      });
-      return;
+    if (planStatus?.can_use_premium && activeTab === 'free') {
+      // Don't auto-switch, let user choose
     }
+  }, [planStatus, activeTab]);
 
-    const newMessage = {
-      id: Date.now(),
-      type: 'user',
-      content: message,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => ({
-      ...prev,
-      [activeTab]: [...prev[activeTab], newMessage]
-    }));
-
-    setMessage('');
-
-    // Simula risposta AI
-    setTimeout(() => {
-      const aiResponse = {
-        id: Date.now() + 1,
-        type: 'ai',
-        content: activeTab === 'free' 
-          ? getItalianSardResponse(message)
-          : getSardResponse(message),
-        timestamp: new Date()
-      };
-
-      setMessages(prev => ({
-        ...prev,
-        [activeTab]: [...prev[activeTab], aiResponse]
-      }));
-    }, 1000);
+  const handleNewChat = async (chatType = 'free') => {
+    const sessionId = await createSession(`Chat ${chatType}`, chatType);
+    if (sessionId) {
+      selectSession(sessionId);
+      setActiveTab(chatType);
+    }
   };
 
-  const getItalianSardResponse = (userMessage) => {
-    const responses = [
-      "Eh beh, questa è una bella domanda! In Sardegna diciamo sempre che 'chi va piano va sano e va lontano', ma noi andiamo sempre di fretta! 😄",
-      "Madonna mia, che bella cosa mi hai chiesto! Sai, noi sardi siamo così: sempre pronti ad aiutare e a raccontare le nostre storie!",
-      "Bene bene! Vedo che sei curioso come un vero sardo! Ti dico una cosa: da noi si dice che 'sa vida est bella' e infatti è proprio così!",
-      "Aho, che bello parlare con te! Senti, in Sardegna abbiamo un detto: 'Deus ti benedigat' - che Dio ti benedica. E io te lo auguro di cuore!"
-    ];
-    return responses[Math.floor(Math.random() * responses.length)];
+  const handleDeleteSession = async (sessionId) => {
+    await deleteSession(sessionId);
   };
 
-  const getSardResponse = (userMessage) => {
-    const responses = [
-      "Eh eja, custa est una bella pregunta! In Sardigna naraimus semper chi 'chie andat a su pasu andat sanu'! 🌊",
-      "Madonna mia, ite bella cosa m'as preguntau! Nois sardos semus aici: semper prontos a agiudare!",
-      "Bene bene! Bidu chi ses curiosu comente unu veru sardu! Ti naro una cosa: dae nois si narat chi 'sa vida est bella'!",
-      "Salude! Ite bellu faeddare cun tegus! Ascurta, in Sardigna tenimus unu ditzere: 'Deus ti benedigat'!"
-    ];
-    return responses[Math.floor(Math.random() * responses.length)];
+  const handleSelectSession = async (sessionId) => {
+    await selectSession(sessionId);
+    // Find session type and switch tab
+    const session = sessions.find(s => s.id === sessionId);
+    if (session) {
+      setActiveTab(session.chat_type);
+    }
   };
 
-  const clearChat = () => {
-    setMessages(prev => ({
-      ...prev,
-      [activeTab]: [prev[activeTab][0]] // Keep only the initial message
-    }));
-    toast({
-      title: "Chat pulita",
-      description: "La conversazione è stata cancellata."
-    });
-  };
+  const currentSessionMessages = messages.filter(msg => 
+    currentSession && msg.session_id === currentSession
+  );
 
-  const exportChat = () => {
-    toast({
-      title: "🚧 Funzionalità in arrivo!",
-      description: "L'export PDF sarà disponibile presto."
-    });
-  };
+  const freeSessions = sessions.filter(s => s.chat_type === 'free');
+  const premiumSessions = sessions.filter(s => s.chat_type === 'premium');
 
   return (
     <>
       <Helmet>
         <title>Chat - SardAI</title>
-        <meta name="description" content="Conversa con l'assistente virtuale SardAI in modalità gratuita o premium." />
+        <meta name="description" content="Conversa con SardAI in modalità gratuita o premium con lingua sarda autentica." />
       </Helmet>
 
       <div className="min-h-screen sardinian-pattern flex">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <header className="glass-effect border-b border-white/10 p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+        <div className="flex-1 flex flex-col lg:flex-row">
+          {/* Chat Sessions Sidebar */}
+          <div className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-white/10 bg-slate-900/50">
+            {/* Header */}
+            <div className="p-4 border-b border-white/10">
+              <div className="flex items-center justify-between mb-4">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -183,141 +122,265 @@ export default function ChatPage() {
                   <Menu className="w-5 h-5" />
                 </Button>
                 
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 sardinian-gradient rounded-lg flex items-center justify-center">
-                    <Sparkles className="w-5 h-5 text-white" />
-                  </div>
-                  <h1 className="text-xl md:text-2xl font-bold text-white">
-                    Chat con SardAI
-                  </h1>
-                </div>
+                <h2 className="text-lg font-semibold text-white">Le tue Chat</h2>
+                
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate('/dashboard')}
+                  className="text-white hover:bg-white/10"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
               </div>
-              
-              <div className="flex items-center space-x-2">
+
+              {/* New Chat Buttons */}
+              <div className="space-y-2">
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={exportChat}
-                  className="text-gray-300 hover:text-white hover:bg-white/10"
+                  onClick={() => handleNewChat('free')}
+                  variant="outline"
+                  className="w-full justify-start border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
                 >
-                  <Download className="w-4 h-4" />
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nuova Chat Gratuita
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearChat}
-                  className="text-gray-300 hover:text-white hover:bg-white/10"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                
+                {planStatus?.can_use_premium && (
+                  <Button
+                    onClick={() => handleNewChat('premium')}
+                    variant="outline"
+                    className="w-full justify-start border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    <Crown className="w-4 h-4 mr-1" />
+                    Nuova Chat Premium
+                  </Button>
+                )}
               </div>
             </div>
-          </header>
+
+            {/* Plan Status */}
+            {planStatus && (
+              <div className="p-4 border-b border-white/10">
+                <div className="bg-slate-800/50 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-300">Piano Attuale</span>
+                    <span className={`text-sm font-semibold ${
+                      planStatus.can_use_premium ? 'text-yellow-400' : 'text-blue-400'
+                    }`}>
+                      {planStatus.plan === 'trial' ? 'Prova Gratuita' : 
+                       planStatus.plan === 'premium' ? 'Premium' : 'Gratuito'}
+                    </span>
+                  </div>
+                  
+                  {planStatus.plan === 'trial' && (
+                    <div className="flex items-center space-x-2 text-xs text-gray-400">
+                      <Calendar className="w-3 h-3" />
+                      <span>{planStatus.trial_days_left} giorni rimasti</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Sessions List */}
+            <div className="flex-1 overflow-y-auto">
+              {/* Free Sessions */}
+              {freeSessions.length > 0 && (
+                <div className="p-4">
+                  <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center">
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Chat Gratuite ({freeSessions.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {freeSessions.map((session) => (
+                      <div
+                        key={session.id}
+                        className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                          currentSession === session.id
+                            ? 'bg-blue-600/20 border border-blue-500/30'
+                            : 'hover:bg-slate-800/50'
+                        }`}
+                        onClick={() => handleSelectSession(session.id)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white truncate">
+                            {session.title}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {new Date(session.updated_at).toLocaleDateString('it-IT')}
+                          </p>
+                        </div>
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSession(session.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Premium Sessions */}
+              {premiumSessions.length > 0 && (
+                <div className="p-4">
+                  <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center">
+                    <Crown className="w-4 h-4 mr-2 text-yellow-400" />
+                    Chat Premium ({premiumSessions.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {premiumSessions.map((session) => (
+                      <div
+                        key={session.id}
+                        className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                          currentSession === session.id
+                            ? 'bg-yellow-600/20 border border-yellow-500/30'
+                            : 'hover:bg-slate-800/50'
+                        }`}
+                        onClick={() => handleSelectSession(session.id)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white truncate">
+                            {session.title}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {new Date(session.updated_at).toLocaleDateString('it-IT')}
+                          </p>
+                        </div>
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSession(session.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {sessions.length === 0 && (
+                <div className="p-8 text-center">
+                  <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-400 mb-4">Nessuna chat ancora</p>
+                  <Button
+                    onClick={() => handleNewChat('free')}
+                    className="sardinian-gradient hover:opacity-90"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Inizia la prima chat
+                  </Button>
+                </div>
+              )}
+
+              {/* Upgrade Section */}
+              {!planStatus?.can_use_premium && (
+                <div className="p-4">
+                  <UpgradeButton planStatus={planStatus} />
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Chat Area */}
           <div className="flex-1 flex flex-col">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-              <div className="px-4 pt-4">
-                <TabsList className="bg-slate-800/50 border border-slate-600">
-                  <TabsTrigger value="free" className="flex items-center space-x-2">
-                    <MessageCircle className="w-4 h-4" />
-                    <span>Modalità Gratuita</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="premium" className="flex items-center space-x-2">
-                    <Crown className="w-4 h-4" />
-                    <span>Modalità Premium</span>
-                    {!profile?.is_premium && profile?.role !== 'admin' && (
-                      <span className="ml-1 px-2 py-1 text-xs bg-yellow-500 text-black rounded-full">
-                        Upgrade
-                      </span>
-                    )}
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-
-              <TabsContent value="free" className="flex-1 flex flex-col mt-0">
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.free.map((msg) => (
-                    <motion.div
-                      key={msg.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <Card className={`max-w-xs lg:max-w-md xl:max-w-lg px-4 py-3 ${
-                        msg.type === 'user' 
-                          ? 'chat-bubble-user text-white border-0' 
-                          : 'chat-bubble-ai text-white border-0'
-                      }`}>
-                        <p className="mb-2">{msg.content}</p>
-                        <p className="text-xs opacity-70">
-                          {msg.timestamp.toLocaleTimeString('it-IT', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </p>
-                      </Card>
-                    </motion.div>
-                  ))}
-                  <div ref={messagesEndRef} />
+            {currentSession ? (
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+                <div className="px-4 pt-4 border-b border-white/10">
+                  <TabsList className="bg-slate-800/50 border border-slate-600">
+                    <TabsTrigger value="free" className="flex items-center space-x-2">
+                      <MessageCircle className="w-4 h-4" />
+                      <span>Modalità Gratuita</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="premium" className="flex items-center space-x-2">
+                      <Crown className="w-4 h-4" />
+                      <span>Modalità Premium</span>
+                      {!planStatus?.can_use_premium && (
+                        <span className="ml-1 px-2 py-1 text-xs bg-yellow-500 text-black rounded-full">
+                          Upgrade
+                        </span>
+                      )}
+                    </TabsTrigger>
+                  </TabsList>
                 </div>
-              </TabsContent>
 
-              <TabsContent value="premium" className="flex-1 flex flex-col mt-0">
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.premium.map((msg) => (
-                    <motion.div
-                      key={msg.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <Card className={`max-w-xs lg:max-w-md xl:max-w-lg px-4 py-3 ${
-                        msg.type === 'user' 
-                          ? 'chat-bubble-user text-white border-0' 
-                          : 'chat-bubble-ai text-white border-0'
-                      }`}>
-                        <p className="mb-2">{msg.content}</p>
-                        <p className="text-xs opacity-70">
-                          {msg.timestamp.toLocaleTimeString('it-IT', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </p>
-                      </Card>
-                    </motion.div>
-                  ))}
-                  <div ref={messagesEndRef} />
-                </div>
-              </TabsContent>
-            </Tabs>
+                <TabsContent value="free" className="flex-1 flex flex-col mt-0">
+                  <FreeChatbot
+                    messages={currentSessionMessages}
+                    onSendMessage={sendMessage}
+                    loading={loading}
+                    planStatus={planStatus}
+                  />
+                </TabsContent>
 
-            {/* Message Input */}
-            <div className="p-4 glass-effect border-t border-white/10">
-              <div className="flex space-x-2">
-                <Input
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder={
-                    activeTab === 'free' 
-                      ? "Scrivi il tuo messaggio..." 
-                      : (profile?.is_premium || profile?.role === 'admin')
-                        ? "Iscrie su messàgiu tuo..." 
-                        : "Upgrade a Premium per scrivere in sardo"
-                  }
-                  disabled={activeTab === 'premium' && !profile?.is_premium && profile?.role !== 'admin'}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  className="bg-slate-800/50 border-slate-600 text-white placeholder:text-gray-400"
-                />
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!message.trim() || (activeTab === 'premium' && !profile?.is_premium && profile?.role !== 'admin')}
-                  className="sardinian-gradient hover:opacity-90"
+                <TabsContent value="premium" className="flex-1 flex flex-col mt-0">
+                  <PremiumChatbot
+                    messages={currentSessionMessages}
+                    onSendMessage={sendMessage}
+                    loading={loading}
+                    planStatus={planStatus}
+                  />
+                </TabsContent>
+              </Tabs>
+            ) : (
+              /* Welcome Screen */
+              <div className="flex-1 flex items-center justify-center p-8">
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8 }}
+                  className="text-center max-w-md"
                 >
-                  <Send className="w-4 h-4" />
-                </Button>
+                  <div className="w-20 h-20 sardinian-gradient rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Sparkles className="w-10 h-10 text-white" />
+                  </div>
+                  
+                  <h2 className="text-3xl font-bold text-white mb-4">
+                    Benvenuto in SardAI Chat!
+                  </h2>
+                  
+                  <p className="text-gray-300 mb-8">
+                    Seleziona una chat esistente dalla barra laterale o creane una nuova 
+                    per iniziare a conversare con il tuo assistente sardo preferito.
+                  </p>
+
+                  <div className="space-y-3">
+                    <Button
+                      onClick={() => handleNewChat('free')}
+                      className="w-full sardinian-gradient hover:opacity-90"
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Inizia Chat Gratuita
+                    </Button>
+                    
+                    {planStatus?.can_use_premium && (
+                      <Button
+                        onClick={() => handleNewChat('premium')}
+                        variant="outline"
+                        className="w-full border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
+                      >
+                        <Crown className="w-4 h-4 mr-2" />
+                        Inizia Chat Premium
+                      </Button>
+                    )}
+                  </div>
+                </motion.div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

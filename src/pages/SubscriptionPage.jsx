@@ -1,12 +1,13 @@
-
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import { useStripe } from '@/hooks/useStripe';
+import { useChat } from '@/hooks/useChat';
 import { 
   ArrowLeft, 
   Crown, 
@@ -16,13 +17,38 @@ import {
   Globe,
   Heart,
   Zap,
-  Shield
+  Shield,
+  Calendar,
+  Clock
 } from 'lucide-react';
 
 export default function SubscriptionPage() {
   const navigate = useNavigate();
-  const { profile, upgradeToPremium } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { profile } = useAuth();
   const { toast } = useToast();
+  const { createCheckoutSession, handlePaymentSuccess, handlePaymentCanceled } = useStripe();
+  const { planStatus, fetchPlanStatus } = useChat();
+
+  // Handle payment status from URL params
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment');
+    if (paymentStatus === 'success') {
+      handlePaymentSuccess();
+      fetchPlanStatus(); // Refresh plan status
+      // Clean URL
+      navigate('/subscription', { replace: true });
+    } else if (paymentStatus === 'canceled') {
+      handlePaymentCanceled();
+      // Clean URL
+      navigate('/subscription', { replace: true });
+    }
+  }, [searchParams, handlePaymentSuccess, handlePaymentCanceled, navigate, fetchPlanStatus]);
+
+  // Fetch plan status on component mount
+  useEffect(() => {
+    fetchPlanStatus();
+  }, [fetchPlanStatus]);
 
   // Admin doesn't need premium upgrade
   if (profile?.role === 'admin') {
@@ -76,30 +102,19 @@ export default function SubscriptionPage() {
                         Il tuo ruolo di amministratore ti dà accesso a:
                       </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-                        <div className="flex items-center space-x-2">
-                          <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
-                          <span className="text-gray-300 text-sm">Tutte le funzionalità Premium</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
-                          <span className="text-gray-300 text-sm">Chat in lingua sarda autentica</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
-                          <span className="text-gray-300 text-sm">Pannello di amministrazione</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
-                          <span className="text-gray-300 text-sm">Gestione utenti e segnalazioni</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
-                          <span className="text-gray-300 text-sm">Statistiche e log di sistema</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
-                          <span className="text-gray-300 text-sm">Gestione storage e file</span>
-                        </div>
+                        {[
+                          'Tutte le funzionalità Premium',
+                          'Chat in lingua sarda autentica',
+                          'Pannello di amministrazione',
+                          'Gestione utenti e segnalazioni',
+                          'Statistiche e log di sistema',
+                          'Gestione storage e file'
+                        ].map((feature, index) => (
+                          <div key={index} className="flex items-center space-x-2">
+                            <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+                            <span className="text-gray-300 text-sm">{feature}</span>
+                          </div>
+                        ))}
                       </div>
                       <div className="flex space-x-4 mt-6">
                         <Button
@@ -127,42 +142,8 @@ export default function SubscriptionPage() {
     );
   }
 
-  const handleUpgrade = async () => {
-    const { success, error } = await upgradeToPremium();
-    if (success) {
-      toast({
-        title: "Benvenuto in Premium! 👑",
-        description: "Ora puoi conversare in lingua sarda autentica. Salude!"
-      });
-      navigate('/dashboard');
-    } else {
-      toast({
-        title: "Errore",
-        description: error,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const freeFeatures = [
-    "Chat in italiano con carattere sardo",
-    "Accesso alle informazioni base sulla Sardegna",
-    "Umorismo e calore tipico sardo",
-    "Supporto via email"
-  ];
-
-  const premiumFeatures = [
-    "Chat in lingua sarda autentica",
-    "Dialetti: Logudorese, Campidanese, Baronia",
-    "Contenuti culturali esclusivi",
-    "Traduzione italiano/sardo",
-    "Mini-corsi di lingua sarda",
-    "Guida turistica sarda interattiva",
-    "Supporto prioritario",
-    "Accesso anticipato alle nuove funzionalità"
-  ];
-
-  if (profile?.is_premium) {
+  // If user already has premium access
+  if (planStatus?.can_use_premium && planStatus?.subscription_active) {
     return (
       <>
         <Helmet>
@@ -213,7 +194,16 @@ export default function SubscriptionPage() {
                         Il tuo abbonamento Premium ti dà accesso a:
                       </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-                        {premiumFeatures.map((feature, index) => (
+                        {[
+                          'Chat in lingua sarda autentica',
+                          'Dialetti: Logudorese, Campidanese',
+                          'Contenuti culturali esclusivi',
+                          'Traduzione italiano/sardo',
+                          'Mini-corsi di lingua sarda',
+                          'Guida turistica sarda interattiva',
+                          'Supporto prioritario',
+                          'Accesso anticipato alle nuove funzionalità'
+                        ].map((feature, index) => (
                           <div key={index} className="flex items-center space-x-2">
                             <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
                             <span className="text-gray-300 text-sm">{feature}</span>
@@ -221,7 +211,7 @@ export default function SubscriptionPage() {
                         ))}
                       </div>
                       <Button
-                        onClick={() => navigate('/dashboard')}
+                        onClick={() => navigate('/chat')}
                         className="w-full sardinian-gradient hover:opacity-90 mt-6"
                       >
                         Inizia a Conversare in Sardo
@@ -236,6 +226,30 @@ export default function SubscriptionPage() {
       </>
     );
   }
+
+  const handleUpgrade = () => {
+    createCheckoutSession();
+  };
+
+  const freeFeatures = [
+    "Chat in italiano con carattere sardo",
+    "Accesso alle informazioni base sulla Sardegna",
+    "Umorismo e calore tipico sardo",
+    "Supporto via email"
+  ];
+
+  const premiumFeatures = [
+    "Chat in lingua sarda autentica",
+    "Dialetti: Logudorese, Campidanese, Baronia",
+    "Contenuti culturali esclusivi",
+    "Traduzione italiano/sardo",
+    "Mini-corsi di lingua sarda",
+    "Guida turistica sarda interattiva",
+    "Supporto prioritario",
+    "Accesso anticipato alle nuove funzionalità"
+  ];
+
+  const isTrialActive = planStatus?.plan === 'trial' && planStatus?.trial_days_left > 0;
 
   return (
     <>
@@ -265,6 +279,40 @@ export default function SubscriptionPage() {
 
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-6xl mx-auto">
+            {/* Trial Status Banner */}
+            {isTrialActive && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-8"
+              >
+                <Card className="sardinian-card border-blue-500/30">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                          <Clock className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">Prova Premium Attiva!</h3>
+                          <p className="text-gray-300">
+                            Ti rimangono <strong>{planStatus.trial_days_left} giorni</strong> di accesso gratuito alle funzionalità premium
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => navigate('/chat')}
+                        className="sardinian-gradient hover:opacity-90"
+                      >
+                        <Crown className="w-4 h-4 mr-2" />
+                        Usa Premium Ora
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -331,7 +379,7 @@ export default function SubscriptionPage() {
                 <Card className="sardinian-card premium-glow h-full relative">
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                     <span className="bg-yellow-500 text-black px-4 py-1 rounded-full text-sm font-medium">
-                      Più Popolare
+                      {isTrialActive ? 'Prova Attiva' : 'Più Popolare'}
                     </span>
                   </div>
                   
@@ -361,7 +409,7 @@ export default function SubscriptionPage() {
                       className="w-full mt-6 sardinian-gradient hover:opacity-90 text-lg py-3"
                     >
                       <Crown className="w-4 h-4 mr-2" />
-                      Diventa Premium
+                      {isTrialActive ? 'Continua con Premium' : 'Diventa Premium'}
                     </Button>
                   </CardContent>
                 </Card>
