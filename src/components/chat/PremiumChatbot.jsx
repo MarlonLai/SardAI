@@ -52,10 +52,11 @@ export default function PremiumChatbot({ messages, onSendMessage, loading, isAdm
               </AvatarFallback>
             </Avatar>
             <div>
-              {isAdmin ? <Shield className="w-16 h-16 text-red-400 mx-auto mb-4" /> : <Crown className="w-16 h-16 text-yellow-400 mx-auto mb-4" />}
+              <h3 className="text-white font-semibold flex items-center">
                 {isAdmin ? <Shield className="w-4 h-4 mr-2 text-red-400" /> : <Crown className="w-4 h-4 mr-2 text-yellow-400" />}
                 {isAdmin ? 'Benvenuto Admin! Accesso completo attivo 🛡️' : 'Salude! Deo so SardAI Premium! 👑'}
               </h3>
+              <p className="text-gray-400 text-sm">
                 {isAdmin ? 
                   'Come amministratore hai accesso a tutte le funzionalità avanzate di SardAI.' :
                   'Oe, comente ses? Deo so inoghe pro ti agiudare in limba sarda auténtica. Ite boles ischire de sa Sardigna nostra?'
