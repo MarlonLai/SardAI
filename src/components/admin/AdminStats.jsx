@@ -210,7 +210,6 @@ export default function AdminStats() {
                     </p>
                   </div>
                 </div>
-              </div>
               ))}
               {(!stats.recentActivity || stats.recentActivity.length === 0) && (
                 <p className="text-gray-400 text-sm">Nessuna attività recente</p>
