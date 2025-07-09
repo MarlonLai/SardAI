@@ -61,7 +61,7 @@ export default function DatabaseManagement() {
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('updated_at', { ascending: false });
 
       if (profilesError) throw profilesError;
       setProfiles(profilesData || []);

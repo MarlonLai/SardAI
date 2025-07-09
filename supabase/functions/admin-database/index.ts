@@ -7,12 +7,13 @@ const corsHeaders = {
 }
 
 interface DatabaseActionRequest {
-  action: 'list_auth_users' | 'create_auth_user' | 'delete_auth_user' | 'update_auth_user' | 'get_system_stats'
+  action: 'list_auth_users' | 'create_auth_user' | 'delete_auth_user' | 'update_auth_user'
   userId?: string
   email?: string
   password?: string
   full_name?: string
-  updates?: Record<string, any>
+  role?: string
+  is_premium?: boolean
 }
 
 Deno.serve(async (req: Request) => {
@@ -22,7 +23,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Create Supabase client
+    // Create Supabase client with service role
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -60,7 +61,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Parse request body
-    const { action, userId, email, password, full_name, updates }: DatabaseActionRequest = await req.json()
+    const { action, userId, email, password, full_name, role, is_premium }: DatabaseActionRequest = await req.json()
 
     switch (action) {
       case 'list_auth_users':
@@ -71,8 +72,8 @@ Deno.serve(async (req: Request) => {
 
         // Log admin action
         await supabaseClient.rpc('log_admin_action', {
-          action_type: 'auth_users_viewed',
-          action_details: { admin_email: user.email }
+          action_type: 'auth_users_listed',
+          action_details: { count: authUsers.users?.length || 0 }
         })
 
         return new Response(
@@ -84,26 +85,29 @@ Deno.serve(async (req: Request) => {
         )
 
       case 'create_auth_user':
-        if (!email || !full_name) throw new Error('Email and full name are required')
+        if (!email || !password) {
+          throw new Error('Email and password are required')
+        }
 
         // Create auth user
-        const { data: newUser, error: createUserError } = await supabaseClient.auth.admin.createUser({
+        const { data: newUser, error: createError } = await supabaseClient.auth.admin.createUser({
           email,
-          password: password || 'TempPassword123!',
+          password,
           email_confirm: true,
           user_metadata: {
-            full_name
+            full_name: full_name || ''
           }
         })
 
-        if (createUserError) throw createUserError
+        if (createError) throw createError
 
         // Log admin action
         await supabaseClient.rpc('log_admin_action', {
           action_type: 'auth_user_created',
-          target_user: newUser.user.id,
+          target_user: newUser.user?.id,
           action_details: { 
-            created_email: email,
+            email,
+            full_name: full_name || '',
             admin_email: user.email 
           }
         })
@@ -117,15 +121,17 @@ Deno.serve(async (req: Request) => {
         )
 
       case 'delete_auth_user':
-        if (!userId) throw new Error('User ID is required')
+        if (!userId) {
+          throw new Error('User ID is required')
+        }
 
-        // Get user info before deletion for logging
+        // Get user info before deletion
         const { data: userToDelete } = await supabaseClient.auth.admin.getUserById(userId)
-        
+
         // Delete auth user
-        const { error: deleteUserError } = await supabaseClient.auth.admin.deleteUser(userId)
+        const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(userId)
         
-        if (deleteUserError) throw deleteUserError
+        if (deleteError) throw deleteError
 
         // Log admin action
         await supabaseClient.rpc('log_admin_action', {
@@ -146,53 +152,37 @@ Deno.serve(async (req: Request) => {
         )
 
       case 'update_auth_user':
-        if (!userId || !updates) throw new Error('User ID and updates are required')
+        if (!userId) {
+          throw new Error('User ID is required')
+        }
+
+        const updateData: any = {}
+        if (email) updateData.email = email
+        if (password) updateData.password = password
+        if (full_name !== undefined) {
+          updateData.user_metadata = { full_name }
+        }
 
         // Update auth user
-        const { data: updatedUser, error: updateUserError } = await supabaseClient.auth.admin.updateUserById(
+        const { data: updatedUser, error: updateError } = await supabaseClient.auth.admin.updateUserById(
           userId,
-          updates
+          updateData
         )
 
-        if (updateUserError) throw updateUserError
+        if (updateError) throw updateError
 
         // Log admin action
         await supabaseClient.rpc('log_admin_action', {
           action_type: 'auth_user_updated',
           target_user: userId,
           action_details: { 
-            updates,
+            updated_fields: Object.keys(updateData),
             admin_email: user.email 
           }
         })
 
         return new Response(
           JSON.stringify(updatedUser),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200 
-          }
-        )
-
-      case 'get_system_stats':
-        // Get system statistics
-        const stats = {
-          tables: 5,
-          functions: 12,
-          policies: 25,
-          storage_buckets: 2,
-          environment: 'production',
-          version: '1.0.0'
-        }
-
-        // Log admin action
-        await supabaseClient.rpc('log_admin_action', {
-          action_type: 'system_stats_viewed',
-          action_details: { admin_email: user.email }
-        })
-
-        return new Response(
-          JSON.stringify(stats),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200 
