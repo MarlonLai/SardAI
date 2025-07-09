@@ -205,12 +205,14 @@ Deno.serve(async (req: Request) => {
 
   } catch (error) {
     console.error('Admin stats error:', error)
-    const message = error?.message || JSON.stringify(error) || 'Unknown error'
+    const message = (error?.message && error.message.trim()) || 
+                   (error && typeof error === 'object' ? JSON.stringify(error) : String(error)) || 
+                   'Failed to fetch admin statistics'
     
     return new Response(
       JSON.stringify({
         error: message,
-        fullError: error
+        fullError: error || 'No error details available'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
