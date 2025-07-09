@@ -1,5 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,7 +14,7 @@ interface LogsRequest {
   search?: string
 }
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -63,13 +62,18 @@ serve(async (req) => {
     const { type, limit = 100, offset = 0, level, search }: LogsRequest = await req.json()
 
     if (type === 'admin') {
-      // Get admin logs
+      // Get admin logs with manual joins
       let query = supabaseClient
         .from('admin_logs')
         .select(`
-          *,
-          admin:admin_id(email, full_name),
-          target_user:target_user_id(email, full_name)
+          id,
+          admin_id,
+          action,
+          target_user_id,
+          details,
+          ip_address,
+          user_agent,
+          created_at
         `)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1)
@@ -82,8 +86,45 @@ serve(async (req) => {
 
       if (adminLogsError) throw adminLogsError
 
+      // Manually fetch admin and target user details
+      const enrichedLogs = await Promise.all((adminLogs || []).map(async (log) => {
+        const enrichedLog = { ...log }
+
+        // Get admin details
+        if (log.admin_id) {
+          const { data: adminUser } = await supabaseClient.auth.admin.getUserById(log.admin_id)
+          const { data: adminProfile } = await supabaseClient
+            .from('profiles')
+            .select('full_name')
+            .eq('id', log.admin_id)
+            .single()
+          
+          enrichedLog.admin = {
+            email: adminUser?.user?.email,
+            full_name: adminProfile?.full_name
+          }
+        }
+
+        // Get target user details
+        if (log.target_user_id) {
+          const { data: targetUser } = await supabaseClient.auth.admin.getUserById(log.target_user_id)
+          const { data: targetProfile } = await supabaseClient
+            .from('profiles')
+            .select('full_name')
+            .eq('id', log.target_user_id)
+            .single()
+          
+          enrichedLog.target_user = {
+            email: targetUser?.user?.email,
+            full_name: targetProfile?.full_name
+          }
+        }
+
+        return enrichedLog
+      }))
+
       return new Response(
-        JSON.stringify(adminLogs || []),
+        JSON.stringify(enrichedLogs),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200 
@@ -91,12 +132,16 @@ serve(async (req) => {
       )
 
     } else if (type === 'system') {
-      // Get system logs
+      // Get system logs with manual joins
       let query = supabaseClient
         .from('system_logs')
         .select(`
-          *,
-          user:user_id(email, full_name)
+          id,
+          level,
+          message,
+          context,
+          user_id,
+          created_at
         `)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1)
@@ -113,8 +158,30 @@ serve(async (req) => {
 
       if (systemLogsError) throw systemLogsError
 
+      // Manually fetch user details
+      const enrichedLogs = await Promise.all((systemLogs || []).map(async (log) => {
+        const enrichedLog = { ...log }
+
+        // Get user details
+        if (log.user_id) {
+          const { data: logUser } = await supabaseClient.auth.admin.getUserById(log.user_id)
+          const { data: userProfile } = await supabaseClient
+            .from('profiles')
+            .select('full_name')
+            .eq('id', log.user_id)
+            .single()
+          
+          enrichedLog.user = {
+            email: logUser?.user?.email,
+            full_name: userProfile?.full_name
+          }
+        }
+
+        return enrichedLog
+      }))
+
       return new Response(
-        JSON.stringify(systemLogs || []),
+        JSON.stringify(enrichedLogs),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200 

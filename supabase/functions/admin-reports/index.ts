@@ -1,5 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +15,7 @@ interface ReportActionRequest {
   offset?: number
 }
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -65,19 +64,81 @@ serve(async (req) => {
 
     switch (action) {
       case 'list':
-        // Get reports with user details
+        // Get reports without automatic joins
         const { data: reports, error: reportsError } = await supabaseClient
           .from('user_reports')
           .select(`
-            *,
-            reporter:reporter_id(id, email, full_name),
-            reported_user:reported_user_id(id, email, full_name),
-            resolver:resolved_by(id, email, full_name)
+            id,
+            reporter_id,
+            reported_user_id,
+            report_type,
+            description,
+            status,
+            admin_notes,
+            resolved_by,
+            resolved_at,
+            created_at,
+            updated_at
           `)
           .order('created_at', { ascending: false })
           .range(offset, offset + limit - 1)
 
         if (reportsError) throw reportsError
+
+        // Manually fetch user details for each report
+        const enrichedReports = await Promise.all((reports || []).map(async (report) => {
+          const enrichedReport = { ...report }
+
+          // Get reporter details
+          if (report.reporter_id) {
+            const { data: reporterUser } = await supabaseClient.auth.admin.getUserById(report.reporter_id)
+            const { data: reporterProfile } = await supabaseClient
+              .from('profiles')
+              .select('full_name')
+              .eq('id', report.reporter_id)
+              .single()
+            
+            enrichedReport.reporter = {
+              id: report.reporter_id,
+              email: reporterUser?.user?.email,
+              full_name: reporterProfile?.full_name
+            }
+          }
+
+          // Get reported user details
+          if (report.reported_user_id) {
+            const { data: reportedUser } = await supabaseClient.auth.admin.getUserById(report.reported_user_id)
+            const { data: reportedProfile } = await supabaseClient
+              .from('profiles')
+              .select('full_name')
+              .eq('id', report.reported_user_id)
+              .single()
+            
+            enrichedReport.reported_user = {
+              id: report.reported_user_id,
+              email: reportedUser?.user?.email,
+              full_name: reportedProfile?.full_name
+            }
+          }
+
+          // Get resolver details
+          if (report.resolved_by) {
+            const { data: resolverUser } = await supabaseClient.auth.admin.getUserById(report.resolved_by)
+            const { data: resolverProfile } = await supabaseClient
+              .from('profiles')
+              .select('full_name')
+              .eq('id', report.resolved_by)
+              .single()
+            
+            enrichedReport.resolver = {
+              id: report.resolved_by,
+              email: resolverUser?.user?.email,
+              full_name: resolverProfile?.full_name
+            }
+          }
+
+          return enrichedReport
+        }))
 
         // Log admin action
         await supabaseClient.rpc('log_admin_action', {
@@ -86,7 +147,7 @@ serve(async (req) => {
         })
 
         return new Response(
-          JSON.stringify(reports || []),
+          JSON.stringify(enrichedReports),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200 

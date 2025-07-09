@@ -1,5 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +15,7 @@ interface AdminActionRequest {
   search?: string
 }
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -65,7 +64,7 @@ serve(async (req) => {
 
     switch (action) {
       case 'list':
-        // Get user management data
+        // Get user management data using the fixed function
         const { data: userData, error: userError } = await supabaseClient
           .rpc('get_user_management_data', {
             limit_count: limit,
@@ -81,8 +80,11 @@ serve(async (req) => {
           action_details: { search, limit, offset }
         })
 
+        // Extract the users array from the result
+        const result = userData?.[0] || { users: [], total: 0 }
+
         return new Response(
-          JSON.stringify(userData.users || []),
+          JSON.stringify(result),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200 
