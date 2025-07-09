@@ -193,41 +193,23 @@ export default function LoginPage() {
               </div>
 
               <div className="mt-4 text-center">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="text-gray-400 hover:text-gray-300"
-                    >
-                      Password dimenticata?
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="sardinian-card">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Recupero Password</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Inserisci la tua email per ricevere le istruzioni per reimpostare la password.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <div className="py-4">
-                      <Label htmlFor="reset-email" className="sr-only">Email</Label>
-                      <Input
-                        id="reset-email"
-                        type="email"
-                        placeholder="la.tua.email@esempio.com"
-                        value={resetEmail}
-                        onChange={(e) => setResetEmail(e.target.value)}
-                        className="bg-slate-800/50 border-slate-600 text-white placeholder:text-gray-400"
-                      />
-                    </div>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Annulla</AlertDialogCancel>
-                      <AlertDialogAction onClick={handlePasswordReset} disabled={loading}>
-                        {loading ? 'Invio...' : 'Invia Email'}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate('/auth/resend-confirmation')}
+                  className="text-gray-400 hover:text-gray-300"
+                >
+                  Password dimenticata?
+                </Button>
+              </div>
+              
+              <div className="mt-2 text-center">
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate('/auth/resend-confirmation')}
+                  className="text-gray-400 hover:text-gray-300 text-sm"
+                >
+                  Non hai ricevuto l'email di conferma?
+                </Button>
               </div>
             </CardContent>
           </Card>

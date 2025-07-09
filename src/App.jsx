@@ -14,9 +14,15 @@ import ProfilePage from '@/pages/ProfilePage.jsx';
 import SubscriptionPage from '@/pages/SubscriptionPage.jsx';
 import AdminPage from '@/pages/AdminPage.jsx';
 import AdminRoute from '@/components/AdminRoute';
+import NotFoundPage from '@/pages/NotFoundPage.jsx';
 import GdprPage from '@/pages/GdprPage.jsx';
 import TermsPage from '@/pages/TermsPage.jsx';
 import PrivacyPage from '@/pages/PrivacyPage.jsx';
+import ErrorPage from '@/pages/auth/ErrorPage.jsx';
+import SuccessPage from '@/pages/auth/SuccessPage.jsx';
+import ResetPasswordPage from '@/pages/auth/ResetPasswordPage.jsx';
+import ResendConfirmationPage from '@/pages/auth/ResendConfirmationPage.jsx';
+import CallbackPage from '@/pages/auth/CallbackPage.jsx';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer.jsx';
 
@@ -44,6 +50,15 @@ function App() {
               <Route path="/gdpr" element={<GdprPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
+              
+              {/* Auth Routes */}
+              <Route path="/auth/error" element={<ErrorPage />} />
+              <Route path="/auth/success" element={<SuccessPage />} />
+              <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/auth/resend-confirmation" element={<ResendConfirmationPage />} />
+              <Route path="/auth/callback" element={<CallbackPage />} />
+              <Route path="/auth/confirm" element={<CallbackPage />} />
+              
               <Route 
                 path="/chat" 
                 element={
@@ -84,7 +99,7 @@ function App() {
                   </AdminRoute>
                 }
               />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </main>
           <Footer />
