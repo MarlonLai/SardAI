@@ -204,11 +204,14 @@ Deno.serve(async (req: Request) => {
     )
 
   } catch (error) {
-    const message = error?.message || JSON.stringify(error) || 'Unknown error'
     console.error('Admin stats error:', error)
+    const message = error?.message || JSON.stringify(error) || 'Unknown error'
     
     return new Response(
-      JSON.stringify({ error: message }),
+      JSON.stringify({
+        error: message,
+        fullError: error
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400 
