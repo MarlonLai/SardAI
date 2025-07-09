@@ -55,46 +55,8 @@ export default function LandingPage() {
       </Helmet>
 
       <div className="min-h-screen">
-        {/* Header */}
-        <header className="glass-effect border-b border-white/10 sticky top-0 z-50">
-          <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-            <motion.div 
-              className="flex items-center space-x-3"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <div className="w-10 h-10 sardinian-gradient rounded-lg flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-2xl font-bold text-white">SardAI</span>
-            </motion.div>
-            
-            <motion.div 
-              className="flex space-x-4"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-            >
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate('/login')}
-                className="text-white hover:bg-white/10"
-              >
-                Accedi
-              </Button>
-              <Button 
-                onClick={() => navigate('/register')}
-                className="sardinian-gradient hover:opacity-90"
-              >
-                Registrati
-              </Button>
-            </motion.div>
-          </div>
-        </header>
-
         {/* Hero Section */}
-        <section className="container mx-auto px-4 py-24 md:py-32 text-center relative overflow-hidden">
+        <section className="container mx-auto px-4 py-16 md:py-24 text-center relative overflow-hidden">
            <div className="absolute -top-20 -left-20 w-96 h-96 bg-blue-500/10 rounded-full filter blur-3xl opacity-50 animate-blob"></div>
            <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-purple-500/10 rounded-full filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
           <motion.div
@@ -105,7 +67,7 @@ export default function LandingPage() {
           >
             <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-6 leading-tight">
               L'assistente che parla
-              <span className="block bg-clip-text text-transparent sardinian-gradient mt-2">
+              <span className="block text-white mt-2">
                 più di tua nonna
               </span>
             </h1>

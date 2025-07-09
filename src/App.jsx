@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import LandingPage from '@/pages/LandingPage';
+import ChatPage from '@/pages/ChatPage';
 import LoginPage from '@/pages/LoginPage.jsx';
 import RegisterPage from '@/pages/RegisterPage.jsx';
 import DashboardPage from '@/pages/DashboardPage.jsx';
@@ -16,6 +17,7 @@ import AdminRoute from '@/components/AdminRoute';
 import GdprPage from '@/pages/GdprPage.jsx';
 import TermsPage from '@/pages/TermsPage.jsx';
 import PrivacyPage from '@/pages/PrivacyPage.jsx';
+import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer.jsx';
 
 function App() {
@@ -33,6 +35,7 @@ function App() {
         </Helmet>
         
         <div className="min-h-screen flex flex-col">
+          <Navigation />
           <main className="flex-grow">
             <Routes>
               <Route path="/" element={<LandingPage />} />
@@ -41,6 +44,14 @@ function App() {
               <Route path="/gdpr" element={<GdprPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
+              <Route 
+                path="/chat" 
+                element={
+                  <ProtectedRoute>
+                    <ChatPage />
+                  </ProtectedRoute>
+                } 
+              />
               <Route 
                 path="/dashboard" 
                 element={
