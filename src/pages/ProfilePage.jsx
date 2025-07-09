@@ -176,7 +176,12 @@ export default function ProfilePage() {
                   </CardTitle>
                   
                   <CardDescription className="text-gray-300 flex items-center justify-center space-x-2">
-                    {profile?.is_premium ? (
+                    {profile?.role === 'admin' ? (
+                      <>
+                        <Shield className="w-4 h-4 text-red-400" />
+                        <span>Amministratore</span>
+                      </>
+                    ) : profile?.is_premium ? (
                       <>
                         <Crown className="w-4 h-4 text-yellow-400" />
                         <span>Utente Premium</span>
@@ -262,7 +267,7 @@ export default function ProfilePage() {
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-bold text-purple-400">
-                        {profile?.is_premium ? 'Premium' : 'Gratuito'}
+                        {profile?.role === 'admin' ? 'Admin' : profile?.is_premium ? 'Premium' : 'Gratuito'}
                       </p>
                       <p className="text-gray-300">Tipo di Account</p>
                     </div>
@@ -271,7 +276,7 @@ export default function ProfilePage() {
               </Card>
 
               {/* Subscription Card */}
-              {!profile?.is_premium && (
+              {!profile?.is_premium && profile?.role !== 'admin' && (
                 <Card className="sardinian-card premium-glow">
                   <CardHeader>
                     <CardTitle className="text-white flex items-center">

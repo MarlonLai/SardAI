@@ -112,7 +112,7 @@ export default function Sidebar({ isOpen, onClose }) {
             <div className="flex-1 min-w-0">
               <p className="text-white font-medium truncate">{profile?.full_name}</p>
               <p className="text-gray-400 text-sm">
-                {profile?.is_premium ? '👑 Premium' : '🆓 Gratuito'}
+                {profile?.role === 'admin' ? '🛡️ Admin' : profile?.is_premium ? '👑 Premium' : '🆓 Gratuito'}
               </p>
             </div>
           </div>

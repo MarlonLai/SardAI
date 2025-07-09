@@ -15,7 +15,8 @@ import {
   Calendar,
   TrendingUp,
   Users,
-  Zap
+  Zap,
+  Shield
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -149,10 +150,12 @@ export default function DashboardPage() {
                       <div>
                         <p className="text-gray-400 text-sm">Piano</p>
                         <p className="text-2xl font-bold text-white">
-                          {profile?.is_premium ? 'Premium' : 'Gratuito'}
+                          {profile?.role === 'admin' ? 'Admin' : profile?.is_premium ? 'Premium' : 'Gratuito'}
                         </p>
                       </div>
-                      {profile?.is_premium ? (
+                      {profile?.role === 'admin' ? (
+                        <Shield className="w-8 h-8 text-red-400" />
+                      ) : profile?.is_premium ? (
                         <Crown className="w-8 h-8 text-yellow-400" />
                       ) : (
                         <Users className="w-8 h-8 text-gray-400" />
@@ -191,7 +194,7 @@ export default function DashboardPage() {
                         </Button>
                       </Link>
                       
-                      {!profile?.is_premium && (
+                      {!profile?.is_premium && profile?.role !== 'admin' && (
                         <Link to="/subscription">
                           <Button variant="outline" className="w-full h-20 flex flex-col space-y-2 border-yellow-400/50 text-yellow-400 hover:bg-yellow-400/10">
                             <Crown className="w-6 h-6" />
@@ -253,7 +256,7 @@ export default function DashboardPage() {
               </motion.div>
               
               {/* Premium Upgrade Card */}
-              {!profile?.is_premium && (
+              {!profile?.is_premium && profile?.role !== 'admin' && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}

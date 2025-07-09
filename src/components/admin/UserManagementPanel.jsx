@@ -180,6 +180,11 @@ export default function UserManagementPanel() {
                             In attesa
                           </span>
                         )}
+                        {user.role === 'admin' && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-red-500/20 text-red-400 mt-1">
+                            🛡️ Admin
+                          </span>
+                        )}
                       </td>
                       <td className="p-4 text-gray-300">
                         {formatDate(user.created_at)}

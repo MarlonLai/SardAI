@@ -102,7 +102,7 @@ export default function Navigation() {
                   <div className="text-sm">
                     <p className="text-white font-medium">{profile?.full_name}</p>
                     <p className="text-gray-400 text-xs">
-                      {profile?.is_premium ? '👑 Premium' : '🆓 Gratuito'}
+                      {profile?.role === 'admin' ? '🛡️ Admin' : profile?.is_premium ? '👑 Premium' : '🆓 Gratuito'}
                     </p>
                   </div>
                 </div>
@@ -172,7 +172,7 @@ export default function Navigation() {
                       <div>
                         <p className="text-white font-medium">{profile?.full_name}</p>
                         <p className="text-gray-400 text-sm">
-                          {profile?.is_premium ? '👑 Premium' : '🆓 Gratuito'}
+                          {profile?.role === 'admin' ? '🛡️ Admin' : profile?.is_premium ? '👑 Premium' : '🆓 Gratuito'}
                         </p>
                       </div>
                     </div>

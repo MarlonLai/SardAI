@@ -15,13 +15,117 @@ import {
   MessageCircle,
   Globe,
   Heart,
-  Zap
+  Zap,
+  Shield
 } from 'lucide-react';
 
 export default function SubscriptionPage() {
   const navigate = useNavigate();
   const { profile, upgradeToPremium } = useAuth();
   const { toast } = useToast();
+
+  // Admin doesn't need premium upgrade
+  if (profile?.role === 'admin') {
+    return (
+      <>
+        <Helmet>
+          <title>Abbonamento Premium - SardAI</title>
+          <meta name="description" content="Gestisci il tuo abbonamento Premium SardAI." />
+        </Helmet>
+
+        <div className="min-h-screen sardinian-pattern">
+          <header className="glass-effect border-b border-white/10 p-4">
+            <div className="container mx-auto flex items-center justify-between">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/dashboard')}
+                className="text-white hover:bg-white/10"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Torna alla Dashboard
+              </Button>
+              
+              <h1 className="text-2xl font-bold text-white">Pannello Admin</h1>
+              
+              <div className="w-32"></div>
+            </div>
+          </header>
+
+          <div className="container mx-auto px-4 py-8">
+            <div className="max-w-2xl mx-auto">
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+              >
+                <Card className="sardinian-card text-center">
+                  <CardHeader>
+                    <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Shield className="w-8 h-8 text-white" />
+                    </div>
+                    <CardTitle className="text-3xl text-white">
+                      Accesso Amministratore 🛡️
+                    </CardTitle>
+                    <CardDescription className="text-gray-300 text-lg">
+                      Come amministratore hai accesso completo a tutte le funzionalità di SardAI!
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <p className="text-white">
+                        Il tuo ruolo di amministratore ti dà accesso a:
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                        <div className="flex items-center space-x-2">
+                          <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+                          <span className="text-gray-300 text-sm">Tutte le funzionalità Premium</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+                          <span className="text-gray-300 text-sm">Chat in lingua sarda autentica</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+                          <span className="text-gray-300 text-sm">Pannello di amministrazione</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+                          <span className="text-gray-300 text-sm">Gestione utenti e segnalazioni</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+                          <span className="text-gray-300 text-sm">Statistiche e log di sistema</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+                          <span className="text-gray-300 text-sm">Gestione storage e file</span>
+                        </div>
+                      </div>
+                      <div className="flex space-x-4 mt-6">
+                        <Button
+                          onClick={() => navigate('/admin')}
+                          className="flex-1 bg-red-600 hover:bg-red-700"
+                        >
+                          <Shield className="w-4 h-4 mr-2" />
+                          Pannello Admin
+                        </Button>
+                        <Button
+                          onClick={() => navigate('/chat')}
+                          className="flex-1 sardinian-gradient hover:opacity-90"
+                        >
+                          Inizia Chat Premium
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   const handleUpgrade = async () => {
     const { success, error } = await upgradeToPremium();

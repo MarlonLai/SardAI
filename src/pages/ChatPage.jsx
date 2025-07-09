@@ -39,7 +39,7 @@ export default function ChatPage() {
       {
         id: 1,
         type: 'ai',
-        content: profile?.is_premium 
+        content: (profile?.is_premium || profile?.role === 'admin')
           ? 'Salude! Deo so su assistente SardAI. Comente ses? Ite boles ischire de sa Sardigna nostra? 🌊'
           : 'Per accedere alla modalità premium e conversare in lingua sarda autentica, aggiorna il tuo abbonamento.',
         timestamp: new Date()
@@ -53,13 +53,33 @@ export default function ChatPage() {
   };
 
   useEffect(() => {
+    // Update premium message based on user status
+    if (profile) {
+      setMessages(prev => ({
+        ...prev,
+        premium: [
+          {
+            id: 1,
+            type: 'ai',
+            content: (profile?.is_premium || profile?.role === 'admin')
+              ? 'Salude! Deo so su assistente SardAI. Comente ses? Ite boles ischire de sa Sardigna nostra? 🌊'
+              : 'Per accedere alla modalità premium e conversare in lingua sarda autentica, aggiorna il tuo abbonamento.',
+            timestamp: new Date()
+          }
+        ]
+      }));
+    }
+  }, [profile]);
+
+  useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
 
-    if (activeTab === 'premium' && !profile?.is_premium) {
+    // Admin has access to all features, otherwise check premium status
+    if (activeTab === 'premium' && !profile?.is_premium && profile?.role !== 'admin') {
       toast({
         title: "Abbonamento Premium Richiesto",
         description: "Aggiorna il tuo abbonamento per accedere alla modalità sarda autentica",
@@ -206,7 +226,7 @@ export default function ChatPage() {
                   <TabsTrigger value="premium" className="flex items-center space-x-2">
                     <Crown className="w-4 h-4" />
                     <span>Modalità Premium</span>
-                    {!profile?.is_premium && (
+                    {!profile?.is_premium && profile?.role !== 'admin' && (
                       <span className="ml-1 px-2 py-1 text-xs bg-yellow-500 text-black rounded-full">
                         Upgrade
                       </span>
@@ -252,7 +272,7 @@ export default function ChatPage() {
                       animate={{ opacity: 1, y: 0 }}
                       className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
-                      <Card className={`max-w-xs lg:max-md xl:max-w-lg px-4 py-3 ${
+                      <Card className={`max-w-xs lg:max-w-md xl:max-w-lg px-4 py-3 ${
                         msg.type === 'user' 
                           ? 'chat-bubble-user text-white border-0' 
                           : 'chat-bubble-ai text-white border-0'
@@ -281,17 +301,17 @@ export default function ChatPage() {
                   placeholder={
                     activeTab === 'free' 
                       ? "Scrivi il tuo messaggio..." 
-                      : profile?.is_premium 
+                      : (profile?.is_premium || profile?.role === 'admin')
                         ? "Iscrie su messàgiu tuo..." 
                         : "Upgrade a Premium per scrivere in sardo"
                   }
-                  disabled={activeTab === 'premium' && !profile?.is_premium}
+                  disabled={activeTab === 'premium' && !profile?.is_premium && profile?.role !== 'admin'}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                   className="bg-slate-800/50 border-slate-600 text-white placeholder:text-gray-400"
                 />
                 <Button
                   onClick={handleSendMessage}
-                  disabled={!message.trim() || (activeTab === 'premium' && !profile?.is_premium)}
+                  disabled={!message.trim() || (activeTab === 'premium' && !profile?.is_premium && profile?.role !== 'admin')}
                   className="sardinian-gradient hover:opacity-90"
                 >
                   <Send className="w-4 h-4" />
