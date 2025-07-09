@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { useStripe } from '@/hooks/useStripe';
-import { useChat } from '@/hooks/useChat';
+import { useSubscription } from '@/hooks/useSubscription';
+import { STRIPE_PRODUCTS } from '@/stripe-config';
 import { 
   ArrowLeft, 
   Crown, 
@@ -19,7 +20,8 @@ import {
   Zap,
   Shield,
   Calendar,
-  Clock
+  Clock,
+  CreditCard
 } from 'lucide-react';
 
 export default function SubscriptionPage() {
@@ -27,15 +29,15 @@ export default function SubscriptionPage() {
   const [searchParams] = useSearchParams();
   const { profile } = useAuth();
   const { toast } = useToast();
-  const { createCheckoutSession, handlePaymentSuccess, handlePaymentCanceled } = useStripe();
-  const { planStatus, fetchPlanStatus } = useChat();
+  const { createCheckoutSession, handlePaymentSuccess, handlePaymentCanceled, loading: stripeLoading } = useStripe();
+  const { subscription, loading: subscriptionLoading, refetch } = useSubscription();
 
   // Handle payment status from URL params
   useEffect(() => {
     const paymentStatus = searchParams.get('payment');
     if (paymentStatus === 'success') {
       handlePaymentSuccess();
-      fetchPlanStatus(); // Refresh plan status
+      refetch(); // Refresh subscription status
       // Clean URL
       navigate('/subscription', { replace: true });
     } else if (paymentStatus === 'canceled') {
@@ -43,14 +45,9 @@ export default function SubscriptionPage() {
       // Clean URL
       navigate('/subscription', { replace: true });
     }
-  }, [searchParams, handlePaymentSuccess, handlePaymentCanceled, navigate, fetchPlanStatus]);
+  }, [searchParams, handlePaymentSuccess, handlePaymentCanceled, navigate, refetch]);
 
-  // Fetch plan status on component mount
-  useEffect(() => {
-    fetchPlanStatus();
-  }, [fetchPlanStatus]);
-
-  // Admin doesn't need premium upgrade
+  // Admin doesn't need subscription upgrade
   if (profile?.role === 'admin') {
     return (
       <>
@@ -142,8 +139,8 @@ export default function SubscriptionPage() {
     );
   }
 
-  // If user already has premium access
-  if (planStatus?.can_use_premium && planStatus?.subscription_active) {
+  // If user has active subscription
+  if (subscription?.isActive) {
     return (
       <>
         <Helmet>
@@ -189,33 +186,66 @@ export default function SubscriptionPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <p className="text-white">
-                        Il tuo abbonamento Premium ti dà accesso a:
-                      </p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-                        {[
-                          'Chat in lingua sarda autentica',
-                          'Dialetti: Logudorese, Campidanese',
-                          'Contenuti culturali esclusivi',
-                          'Traduzione italiano/sardo',
-                          'Mini-corsi di lingua sarda',
-                          'Guida turistica sarda interattiva',
-                          'Supporto prioritario',
-                          'Accesso anticipato alle nuove funzionalità'
-                        ].map((feature, index) => (
-                          <div key={index} className="flex items-center space-x-2">
-                            <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
-                            <span className="text-gray-300 text-sm">{feature}</span>
+                    <div className="space-y-6">
+                      {/* Current Subscription Info */}
+                      <div className="bg-slate-800/30 p-4 rounded-lg">
+                        <h3 className="text-white font-semibold mb-2">Piano Attuale</h3>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-blue-400 font-medium">
+                              {subscription.product?.name || 'Abbonamento Premium'}
+                            </p>
+                            <p className="text-gray-400 text-sm">
+                              {subscription.product?.price} {subscription.product?.currency} / {subscription.product?.interval === 'month' ? 'mese' : 'anno'}
+                            </p>
                           </div>
-                        ))}
+                          <div className="text-right">
+                            <p className="text-gray-400 text-sm">Rinnovo</p>
+                            <p className="text-white text-sm">
+                              {subscription.current_period_end ? 
+                                new Date(subscription.current_period_end * 1000).toLocaleDateString('it-IT') 
+                                : 'N/A'
+                              }
+                            </p>
+                          </div>
+                        </div>
+                        {subscription.cancel_at_period_end && (
+                          <div className="mt-3 p-2 bg-yellow-900/30 border border-yellow-500/30 rounded">
+                            <p className="text-yellow-400 text-sm">
+                              ⚠️ L'abbonamento verrà cancellato alla fine del periodo corrente
+                            </p>
+                          </div>
+                        )}
                       </div>
-                      <Button
-                        onClick={() => navigate('/chat')}
-                        className="w-full sardinian-gradient hover:opacity-90 mt-6"
-                      >
-                        Inizia a Conversare in Sardo
-                      </Button>
+
+                      <div className="space-y-4">
+                        <p className="text-white">
+                          Il tuo abbonamento Premium ti dà accesso a:
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                          {[
+                            'Chat in lingua sarda autentica',
+                            'Dialetti: Logudorese, Campidanese',
+                            'Contenuti culturali esclusivi',
+                            'Traduzione italiano/sardo',
+                            'Mini-corsi di lingua sarda',
+                            'Guida turistica sarda interattiva',
+                            'Supporto prioritario',
+                            'Accesso anticipato alle nuove funzionalità'
+                          ].map((feature, index) => (
+                            <div key={index} className="flex items-center space-x-2">
+                              <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+                              <span className="text-gray-300 text-sm">{feature}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <Button
+                          onClick={() => navigate('/chat')}
+                          className="w-full sardinian-gradient hover:opacity-90 mt-6"
+                        >
+                          Inizia a Conversare in Sardo
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -227,8 +257,8 @@ export default function SubscriptionPage() {
     );
   }
 
-  const handleUpgrade = () => {
-    createCheckoutSession();
+  const handleUpgrade = (priceId) => {
+    createCheckoutSession(priceId, 'subscription');
   };
 
   const freeFeatures = [
@@ -249,7 +279,13 @@ export default function SubscriptionPage() {
     "Accesso anticipato alle nuove funzionalità"
   ];
 
-  const isTrialActive = planStatus?.plan === 'trial' && planStatus?.trial_days_left > 0;
+  if (subscriptionLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -279,40 +315,6 @@ export default function SubscriptionPage() {
 
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-6xl mx-auto">
-            {/* Trial Status Banner */}
-            {isTrialActive && (
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-8"
-              >
-                <Card className="sardinian-card border-blue-500/30">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                          <Clock className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="text-white font-semibold">Prova Premium Attiva!</h3>
-                          <p className="text-gray-300">
-                            Ti rimangono <strong>{planStatus.trial_days_left} giorni</strong> di accesso gratuito alle funzionalità premium
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        onClick={() => navigate('/chat')}
-                        className="sardinian-gradient hover:opacity-90"
-                      >
-                        <Crown className="w-4 h-4 mr-2" />
-                        Usa Premium Ora
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -330,7 +332,7 @@ export default function SubscriptionPage() {
               </p>
             </motion.div>
 
-            <div className="grid md:grid-cols-2 gap-8 mb-12">
+            <div className="grid md:grid-cols-3 gap-8 mb-12">
               {/* Free Plan */}
               <motion.div
                 initial={{ opacity: 0, x: -30 }}
@@ -370,50 +372,73 @@ export default function SubscriptionPage() {
                 </Card>
               </motion.div>
 
-              {/* Premium Plan */}
-              <motion.div
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: 0.4 }}
-              >
-                <Card className="sardinian-card premium-glow h-full relative">
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-yellow-500 text-black px-4 py-1 rounded-full text-sm font-medium">
-                      {isTrialActive ? 'Prova Attiva' : 'Più Popolare'}
-                    </span>
-                  </div>
-                  
-                  <CardHeader className="text-center">
-                    <div className="w-12 h-12 sardinian-gradient rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Crown className="w-6 h-6 text-white" />
-                    </div>
-                    <CardTitle className="text-2xl text-white">Premium</CardTitle>
-                    <CardDescription className="text-gray-300">
-                      Esperienza completa sarda
-                    </CardDescription>
-                    <div className="text-3xl font-bold text-white mt-4">
-                      €9.99<span className="text-lg font-normal text-gray-400">/mese</span>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {premiumFeatures.map((feature, index) => (
-                        <div key={index} className="flex items-center space-x-2">
-                          <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
-                          <span className="text-gray-300 text-sm">{feature}</span>
+              {/* Premium Plans */}
+              {STRIPE_PRODUCTS.map((product, index) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, x: 30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.8, delay: 0.4 + (index * 0.1) }}
+                >
+                  <Card className={`sardinian-card premium-glow h-full relative ${product.interval === 'month' ? 'border-yellow-500/30' : ''}`}>
+                    {product.interval === 'month' && (
+                      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                        <span className="bg-yellow-500 text-black px-4 py-1 rounded-full text-sm font-medium">
+                          Più Popolare
+                        </span>
+                      </div>
+                    )}
+                    
+                    <CardHeader className="text-center">
+                      <div className="w-12 h-12 sardinian-gradient rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Crown className="w-6 h-6 text-white" />
+                      </div>
+                      <CardTitle className="text-2xl text-white">{product.name}</CardTitle>
+                      <CardDescription className="text-gray-300">
+                        {product.description}
+                      </CardDescription>
+                      <div className="text-3xl font-bold text-white mt-4">
+                        {product.price} {product.currency}
+                        <span className="text-lg font-normal text-gray-400">
+                          /{product.interval === 'month' ? 'mese' : 'anno'}
+                        </span>
+                      </div>
+                      {product.interval === 'year' && (
+                        <div className="text-sm text-green-400 mt-2">
+                          Risparmia il 17% rispetto al piano mensile!
                         </div>
-                      ))}
-                    </div>
-                    <Button 
-                      onClick={handleUpgrade}
-                      className="w-full mt-6 sardinian-gradient hover:opacity-90 text-lg py-3"
-                    >
-                      <Crown className="w-4 h-4 mr-2" />
-                      {isTrialActive ? 'Continua con Premium' : 'Diventa Premium'}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {premiumFeatures.map((feature, featureIndex) => (
+                          <div key={featureIndex} className="flex items-center space-x-2">
+                            <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+                            <span className="text-gray-300 text-sm">{feature}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <Button 
+                        onClick={() => handleUpgrade(product.priceId)}
+                        disabled={stripeLoading}
+                        className="w-full mt-6 sardinian-gradient hover:opacity-90 text-lg py-3"
+                      >
+                        {stripeLoading ? (
+                          <div className="flex items-center space-x-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            <span>Caricamento...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <Crown className="w-4 h-4 mr-2" />
+                            Diventa Premium
+                          </>
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
             </div>
 
             {/* Features Showcase */}

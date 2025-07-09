@@ -6,14 +6,15 @@ export const useStripe = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const createCheckoutSession = async (priceId = null) => {
+  const createCheckoutSession = async (priceId, mode = 'subscription') => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+      const { data, error } = await supabase.functions.invoke('stripe-checkout', {
         body: {
-          priceId,
-          successUrl: `${window.location.origin}/dashboard?payment=success`,
-          cancelUrl: `${window.location.origin}/subscription?payment=canceled`
+          price_id: priceId,
+          mode,
+          success_url: `${window.location.origin}/subscription?payment=success`,
+          cancel_url: `${window.location.origin}/subscription?payment=canceled`
         }
       });
 
@@ -41,7 +42,7 @@ export const useStripe = () => {
   const handlePaymentSuccess = () => {
     toast({
       title: "Pagamento completato! 🎉",
-      description: "Benvenuto in SardAI Premium! Ora puoi accedere alla chat in lingua sarda.",
+      description: "Grazie per il tuo acquisto! Il tuo abbonamento è ora attivo.",
     });
   };
 

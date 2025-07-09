@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { useChat } from '@/hooks/useChat';
 import { useStripe } from '@/hooks/useStripe';
+import { useSubscription } from '@/hooks/useSubscription';
 import Sidebar from '@/components/Sidebar';
 import FreeChatbot from '@/components/chat/FreeChatbot';
 import PremiumChatbot from '@/components/chat/PremiumChatbot';
@@ -30,6 +31,7 @@ export default function ChatPage() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const { handlePaymentSuccess, handlePaymentCanceled } = useStripe();
+  const { subscription, refetch: refetchSubscription } = useSubscription();
   const [activeTab, setActiveTab] = useState('free');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
@@ -52,6 +54,7 @@ export default function ChatPage() {
     if (paymentStatus === 'success') {
       handlePaymentSuccess();
       fetchPlanStatus(); // Refresh plan status
+      refetchSubscription(); // Refresh subscription status
       // Clean URL
       navigate('/chat', { replace: true });
     } else if (paymentStatus === 'canceled') {
@@ -59,14 +62,7 @@ export default function ChatPage() {
       // Clean URL
       navigate('/chat', { replace: true });
     }
-  }, [searchParams, handlePaymentSuccess, handlePaymentCanceled, navigate, fetchPlanStatus]);
-
-  // Auto-switch to premium tab if user has access
-  useEffect(() => {
-    if (planStatus?.can_use_premium && activeTab === 'free') {
-      // Don't auto-switch, let user choose
-    }
-  }, [planStatus, activeTab]);
+  }, [searchParams, handlePaymentSuccess, handlePaymentCanceled, navigate, fetchPlanStatus, refetchSubscription]);
 
   const handleNewChat = async (chatType = 'free') => {
     const sessionId = await createSession(`Chat ${chatType}`, chatType);
@@ -95,6 +91,8 @@ export default function ChatPage() {
 
   const freeSessions = sessions.filter(s => s.chat_type === 'free');
   const premiumSessions = sessions.filter(s => s.chat_type === 'premium');
+
+  const canUsePremium = subscription?.isActive || profile?.role === 'admin';
 
   return (
     <>
@@ -144,7 +142,7 @@ export default function ChatPage() {
                   Nuova Chat Gratuita
                 </Button>
                 
-                {planStatus?.can_use_premium && (
+                {canUsePremium && (
                   <Button
                     onClick={() => handleNewChat('premium')}
                     variant="outline"
@@ -158,24 +156,25 @@ export default function ChatPage() {
               </div>
             </div>
 
-            {/* Plan Status */}
-            {planStatus && (
+            {/* Subscription Status */}
+            {subscription && (
               <div className="p-4 border-b border-white/10">
                 <div className="bg-slate-800/50 rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-gray-300">Piano Attuale</span>
                     <span className={`text-sm font-semibold ${
-                      planStatus.can_use_premium ? 'text-yellow-400' : 'text-blue-400'
+                      subscription.isActive ? 'text-yellow-400' : 'text-blue-400'
                     }`}>
-                      {planStatus.plan === 'trial' ? 'Prova Gratuita' : 
-                       planStatus.plan === 'premium' ? 'Premium' : 'Gratuito'}
+                      {subscription.isActive ? 'Premium' : 'Gratuito'}
                     </span>
                   </div>
                   
-                  {planStatus.plan === 'trial' && (
+                  {subscription.isActive && subscription.current_period_end && (
                     <div className="flex items-center space-x-2 text-xs text-gray-400">
                       <Calendar className="w-3 h-3" />
-                      <span>{planStatus.trial_days_left} giorni rimasti</span>
+                      <span>
+                        Rinnovo: {new Date(subscription.current_period_end * 1000).toLocaleDateString('it-IT')}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -288,9 +287,9 @@ export default function ChatPage() {
               )}
 
               {/* Upgrade Section */}
-              {!planStatus?.can_use_premium && (
+              {!canUsePremium && (
                 <div className="p-4">
-                  <UpgradeButton planStatus={planStatus} />
+                  <UpgradeButton />
                 </div>
               )}
             </div>
@@ -309,7 +308,7 @@ export default function ChatPage() {
                     <TabsTrigger value="premium" className="flex items-center space-x-2">
                       <Crown className="w-4 h-4" />
                       <span>Modalità Premium</span>
-                      {!planStatus?.can_use_premium && (
+                      {!canUsePremium && (
                         <span className="ml-1 px-2 py-1 text-xs bg-yellow-500 text-black rounded-full">
                           Upgrade
                         </span>
@@ -332,7 +331,6 @@ export default function ChatPage() {
                     messages={currentSessionMessages}
                     onSendMessage={sendMessage}
                     loading={loading}
-                    planStatus={planStatus}
                   />
                 </TabsContent>
               </Tabs>
@@ -367,7 +365,7 @@ export default function ChatPage() {
                       Inizia Chat Gratuita
                     </Button>
                     
-                    {planStatus?.can_use_premium && (
+                    {canUsePremium && (
                       <Button
                         onClick={() => handleNewChat('premium')}
                         variant="outline"

@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useSubscription } from '@/hooks/useSubscription';
 import { Send, Crown, User, Loader2, Sparkles } from 'lucide-react';
 
-export default function PremiumChatbot({ messages, onSendMessage, loading, planStatus }) {
+export default function PremiumChatbot({ messages, onSendMessage, loading }) {
   const [message, setMessage] = useState('');
   const messagesEndRef = useRef(null);
+  const { subscription } = useSubscription();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -36,7 +38,7 @@ export default function PremiumChatbot({ messages, onSendMessage, loading, planS
       .replace(/\n/g, '<br>');
   };
 
-  const canUsePremium = planStatus?.can_use_premium || false;
+  const canUsePremium = subscription?.isActive || false;
 
   if (!canUsePremium) {
     return (
@@ -76,10 +78,7 @@ export default function PremiumChatbot({ messages, onSendMessage, loading, planS
             
             <p className="text-gray-300 mb-6">
               Per conversare in lingua sarda autentica con SardAI, 
-              {planStatus?.plan === 'trial' 
-                ? ` hai ancora ${planStatus.trial_days_left} giorni di prova gratuita rimasti, oppure puoi`
-                : ' devi'
-              } aggiornare al piano Premium.
+              devi avere un abbonamento Premium attivo.
             </p>
 
             <div className="space-y-3 text-sm text-gray-400 mb-6">
