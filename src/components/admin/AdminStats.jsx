@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { 
@@ -9,7 +10,11 @@ import {
   Activity, 
   Calendar,
   TrendingUp,
-  Clock
+  Clock,
+  Crown,
+  Flag,
+  AlertTriangle,
+  RefreshCw
 } from 'lucide-react';
 
 export default function AdminStats() {
@@ -204,7 +209,7 @@ export default function AdminStats() {
                       {new Date(activity.created_at).toLocaleString('it-IT')}
                     </p>
                   </div>
-                </span>
+                </div>
               </div>
               ))}
               {(!stats.recentActivity || stats.recentActivity.length === 0) && (
