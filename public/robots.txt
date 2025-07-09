@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://comforting-cassata-a5ad1b.netlify.app/sitemap.xml
+
+# Disallow admin pages
+Disallow: /admin
+
+# Allow important pages
+Allow: /
+Allow: /login
+Allow: /register
+Allow: /subscription
+Allow: /terms
+Allow: /privacy
+Allow: /gdpr
+
+# Crawl delay (optional)
+Crawl-delay: 1
