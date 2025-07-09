@@ -43,7 +43,7 @@ export default function AdminPage() {
 
   // Verifica che l'email sia quella autorizzata
   useEffect(() => {
-    if (user && user.email !== 'rikydisk@hotmail.com') {
+    if (user && user.email !== 'marlon.lai@hotmail.com') {
       toast({
         title: "Accesso Limitato",
         description: "Solo l'amministratore autorizzato può accedere a questo pannello.",
@@ -53,7 +53,7 @@ export default function AdminPage() {
     }
   }, [user, navigate, toast]);
 
-  if (!profile || profile.role !== 'admin' || !user || user.email !== 'rikydisk@hotmail.com') {
+  if (!profile || profile.role !== 'admin' || !user || user.email !== 'marlon.lai@hotmail.com') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>

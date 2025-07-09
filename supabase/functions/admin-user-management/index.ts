@@ -56,8 +56,8 @@ serve(async (req) => {
       .eq('id', user.id)
       .single()
 
-    if (profileError || profile?.role !== 'admin') {
-      throw new Error('Access denied. Admin privileges required.')
+    if (profileError || profile?.role !== 'admin' || user.email !== 'marlon.lai@hotmail.com') {
+      throw new Error('Access denied. Only marlon.lai@hotmail.com with admin role can access this function.')
     }
 
     // Parse request body
