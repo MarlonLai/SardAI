@@ -13,7 +13,8 @@ import {
   Mail,
   CreditCard,
   HelpCircle,
-  MessageCircle
+  MessageCircle,
+  Clock
 } from 'lucide-react';
 
 export default function PaymentErrorPage() {
@@ -267,6 +268,7 @@ export default function PaymentErrorPage() {
             <p className="text-gray-400 text-sm italic">
               "Madonna mia! Qualcosa è andato storto, ma non ti preoccupare!" 😅
             </p>
+          </motion.div>
         </motion.div>
       </div>
     </>
