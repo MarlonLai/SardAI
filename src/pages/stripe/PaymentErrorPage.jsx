@@ -121,6 +121,7 @@ export default function PaymentErrorPage() {
               <span className="text-3xl font-bold text-white">SardAI</span>
             </div>
           </div>
+          </div>
 
           {/* Error Card */}
           <Card className="sardinian-card">
