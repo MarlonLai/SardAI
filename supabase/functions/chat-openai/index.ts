@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -88,6 +88,7 @@ Deno.serve(async (req: Request) => {
     if (!user.id) {
       throw new Error('User ID is missing')
     }
+
     // Parse request body
     const { message, sessionId, chatType }: ChatRequest = await req.json()
 
@@ -139,11 +140,18 @@ Deno.serve(async (req: Request) => {
         .rpc('get_user_plan_status', { user_uuid: user.id })
 
       if (planError) throw planError
-      userPlan = planStatus[0]
+      userPlan = planStatus?.[0] ?? { 
+        can_use_premium: false, 
+        plan: 'free', 
+        status: 'active',
+        trial_days_left: 0,
+        trial_expired: true,
+        subscription_active: false
+      }
       
       // Validate access to premium chat
       if (chatType === 'premium' && !userPlan.can_use_premium) {
-        throw new Error('Premium access required. Please upgrade your plan or check your trial status.')
+        throw new Error('Accesso Premium richiesto. Aggiorna il tuo piano per continuare.')
       }
     }
 
@@ -157,7 +165,18 @@ Deno.serve(async (req: Request) => {
         })
 
       if (sessionError) throw sessionError
-      currentSessionId = newSessionId
+      
+      // Log what the function returns to debug
+      console.log('create_chat_session returned:', newSessionId)
+      
+      // Handle different return types
+      if (typeof newSessionId === 'string') {
+        currentSessionId = newSessionId
+      } else if (newSessionId && typeof newSessionId === 'object' && newSessionId.id) {
+        currentSessionId = newSessionId.id
+      } else {
+        throw new Error('Invalid session ID returned from create_chat_session')
+      }
     }
 
     // Get chat history for context
@@ -207,7 +226,7 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini',
         messages: messages,
         max_tokens: chatType === 'premium' || isAdmin ? 1000 : 500,
         temperature: 0.8,
@@ -217,14 +236,15 @@ Deno.serve(async (req: Request) => {
 
     if (!openaiResponse.ok) {
       const errorData = await openaiResponse.json()
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`)
+      console.error('OpenAI API error:', errorData)
+      throw new Error('Il servizio di chat è momentaneamente non disponibile. Riprova tra qualche minuto!')
     }
 
     const openaiData = await openaiResponse.json()
     const assistantMessage = openaiData.choices[0]?.message?.content
 
     if (!assistantMessage) {
-      throw new Error('No response from OpenAI')
+      throw new Error('SardAI è momentaneamente occupato. Riprova tra poco!')
     }
 
     // Add assistant message to database
@@ -243,7 +263,7 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({
         message: assistantMessage,
         sessionId: currentSessionId,
-        tokensUsed: openaiData.usage?.total_tokens || 0,
+        tokensUsed: openaiData.usage?.total_tokens ?? 0,
         planStatus: userPlan
       }),
       { 
@@ -255,14 +275,26 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error('Chat OpenAI error:', error)
     
+    // Provide user-friendly error messages
+    let userMessage = 'Si è verificato un errore imprevisto. Riprova tra poco!'
+    let errorCode = 'CHAT_ERROR'
+    
+    if (error.message.includes('Premium access required') || error.message.includes('Accesso Premium richiesto')) {
+      userMessage = error.message
+      errorCode = 'PREMIUM_REQUIRED'
+    } else if (error.message.includes('momentaneamente')) {
+      userMessage = error.message
+    }
+    
     return new Response(
       JSON.stringify({ 
-        error: error.message,
-        code: error.message.includes('Premium access required') ? 'PREMIUM_REQUIRED' : 'CHAT_ERROR'
+        error: userMessage,
+        code: errorCode,
+        debug: error.message // Keep original error for debugging
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: error.message.includes('Premium access required') ? 403 : 400
+        status: errorCode === 'PREMIUM_REQUIRED' ? 403 : 500
       }
     )
   }
