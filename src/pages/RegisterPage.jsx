@@ -14,6 +14,8 @@ export default function RegisterPage() {
   const navigate = useNavigate();
   const { register } = useAuth();
   const { toast } = useToast();
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -64,11 +66,16 @@ export default function RegisterPage() {
     });
     
     if (result.success) {
-      toast({
-        title: "Benvenuto in SardAI! 🎉",
-        description: "Registrazione completata con successo! Ora puoi accedere al tuo account."
-      });
-      navigate('/dashboard');
+      if (result.needsConfirmation) {
+        setUserEmail(formData.email);
+        setRegistrationSuccess(true);
+      } else {
+        toast({
+          title: "Benvenuto in SardAI! 🎉",
+          description: "Registrazione completata con successo! Ora puoi accedere al tuo account."
+        });
+        navigate('/dashboard');
+      }
     } else {
       let errorMessage = result.error || "Si è verificato un errore durante la registrazione.";
       
