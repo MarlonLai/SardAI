@@ -25,11 +25,8 @@ export default function PaymentErrorPage() {
 
   useEffect(() => {
     const error = searchParams.get('error') || 'Si è verificato un errore durante il pagamento';
-    const errorCode = searchParams.get('error_code') || '';
-    
     setErrorMessage(decodeURIComponent(error));
 
-    // Show error toast
     toast({
       title: "Errore nel pagamento",
       description: "Si è verificato un problema durante il processo di pagamento.",
@@ -39,7 +36,7 @@ export default function PaymentErrorPage() {
 
   const getErrorDetails = (message) => {
     const lowerMessage = message.toLowerCase();
-    
+
     if (lowerMessage.includes('card') || lowerMessage.includes('declined')) {
       return {
         title: 'Carta Rifiutata',
@@ -53,7 +50,7 @@ export default function PaymentErrorPage() {
         ]
       };
     }
-    
+
     if (lowerMessage.includes('expired')) {
       return {
         title: 'Sessione Scaduta',
@@ -116,7 +113,7 @@ export default function PaymentErrorPage() {
             >
               <AlertTriangle className="w-10 h-10 text-white" />
             </motion.div>
-            
+
             <div className="flex items-center justify-center space-x-3 mb-4">
               <div className="w-12 h-12 sardinian-gradient rounded-lg flex items-center justify-center">
                 <Sparkles className="w-7 h-7 text-white" />
@@ -131,12 +128,12 @@ export default function PaymentErrorPage() {
               <CardTitle className="text-3xl font-bold text-white mb-2">
                 {errorDetails.title}
               </CardTitle>
-              
+
               <p className="text-gray-300 text-lg">
                 {errorDetails.description}
               </p>
             </CardHeader>
-            
+
             <CardContent className="space-y-6">
               {/* Error Details */}
               <div className="bg-red-900/20 border border-red-500/30 p-6 rounded-lg">
@@ -144,7 +141,7 @@ export default function PaymentErrorPage() {
                   <HelpCircle className="w-5 h-5 mr-2" />
                   Cosa Puoi Fare:
                 </h3>
-                
+
                 <ul className="space-y-2 text-red-200 text-sm">
                   {errorDetails.suggestions.map((suggestion, index) => (
                     <li key={index} className="flex items-start space-x-2">
@@ -161,23 +158,23 @@ export default function PaymentErrorPage() {
                   <CreditCard className="w-5 h-5 mr-2" />
                   Problemi Comuni:
                 </h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-300">
                   <div>
                     <p className="font-medium text-white mb-1">Carta Rifiutata</p>
                     <p>Verifica numero, scadenza e CVV</p>
                   </div>
-                  
+
                   <div>
                     <p className="font-medium text-white mb-1">Fondi Insufficienti</p>
                     <p>Controlla il saldo disponibile</p>
                   </div>
-                  
+
                   <div>
                     <p className="font-medium text-white mb-1">Carta Scaduta</p>
                     <p>Usa una carta con data valida</p>
                   </div>
-                  
+
                   <div>
                     <p className="font-medium text-white mb-1">Blocco Banca</p>
                     <p>Contatta la tua banca</p>
@@ -204,7 +201,7 @@ export default function PaymentErrorPage() {
                     <MessageCircle className="w-4 h-4 mr-2" />
                     Chat Gratuita
                   </Button>
-                  
+
                   <Button
                     onClick={() => navigate('/dashboard')}
                     variant="outline"
@@ -222,11 +219,11 @@ export default function PaymentErrorPage() {
                   <Mail className="w-5 h-5 mr-2" />
                   Hai Bisogno di Aiuto?
                 </h3>
-                
+
                 <p className="text-blue-200 text-sm mb-4">
                   Il nostro team di supporto è qui per aiutarti con qualsiasi problema di pagamento.
                 </p>
-                
+
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center space-x-2">
                     <Mail className="w-4 h-4 text-blue-400" />
@@ -237,7 +234,7 @@ export default function PaymentErrorPage() {
                       info@sardai.tech
                     </a>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <Clock className="w-4 h-4 text-blue-400" />
                     <span className="text-blue-200">Risposta entro 24 ore</span>
@@ -269,7 +266,6 @@ export default function PaymentErrorPage() {
               "Madonna mia! Qualcosa è andato storto, ma non ti preoccupare!" 😅
             </p>
           </motion.div>
-        </motion.div>
         </motion.div>
       </div>
     </>
