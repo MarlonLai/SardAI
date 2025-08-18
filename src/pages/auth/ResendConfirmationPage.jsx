@@ -32,11 +32,10 @@ export default function ResendConfirmationPage() {
     setLoading(true);
 
     try {
-      // Use custom email handler
       const { data, error } = await supabase.functions.invoke('custom-email-handler', {
         body: {
           type: 'resend_confirmation',
-          email: email,
+          email,
           redirectTo: `${window.location.origin}/auth/confirm?type=signup`
         }
       });

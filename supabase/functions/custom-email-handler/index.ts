@@ -37,10 +37,17 @@ Deno.serve(async (req: Request) => {
 
     if (req.method === 'POST') {
       // Parse request body for email actions
-      const { type, email, password, redirectTo }: EmailRequest = await req.json()
+      const body = await req.json()
+      console.log('Received request body:', body) // Debug log
+      
+      const { type, email, password, redirectTo }: EmailRequest = body
 
-      if (!type || !email || (type === 'signup' && !password)) {
-        throw new Error('Type, email and password (for signup) are required')
+      if (!type || !email) {
+        throw new Error('Type and email are required')
+      }
+      
+      if (type === 'signup' && !password) {
+        throw new Error('Password is required for signup')
       }
 
       let result
@@ -48,13 +55,9 @@ Deno.serve(async (req: Request) => {
 
       switch (type) {
         case 'signup':
-          if (!password) {
-            throw new Error('Password is required for signup')
-          }
-          
           result = await supabaseClient.auth.signUp({
             email,
-            password, // Use password provided by client
+            password,
             options: {
               emailRedirectTo: redirectTo || `${baseUrl}/auth/confirm?type=signup`
             }

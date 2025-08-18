@@ -12,7 +12,7 @@ import { Sparkles, Mail, Lock, User, ArrowLeft, Eye, EyeOff, CheckCircle, Send }
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register, resendConfirmationEmail } = useAuth();
   const { toast } = useToast();
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [userEmail, setUserEmail] = useState('');
@@ -184,7 +184,21 @@ export default function RegisterPage() {
                     variant="outline"
                     className="w-full border-white/20 text-white hover:bg-white/10"
                   >
-                    Non hai ricevuto l'email?
+                    <Button
+                      onClick={async () => {
+                        const result = await resendConfirmationEmail(userEmail);
+                        if (result.success) {
+                          toast({
+                            title: "Email reinviata! 📧",
+                            description: "Controlla nuovamente la tua casella di posta."
+                          });
+                        }
+                      }}
+                      variant="outline"
+                      className="w-full border-white/20 text-white hover:bg-white/10"
+                    >
+                      Reinvia Email
+                    </Button>
                   </Button>
                 </div>
 

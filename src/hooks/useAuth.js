@@ -43,7 +43,7 @@ export const useAuth = () => {
       const { data, error } = await supabase.functions.invoke('custom-email-handler', {
         body: {
           type: 'resend_confirmation',
-          email: email,
+          email,
           redirectTo: `${window.location.origin}/auth/confirm?type=signup`
         }
       });

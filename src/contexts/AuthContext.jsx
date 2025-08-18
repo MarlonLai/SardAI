@@ -70,12 +70,35 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async ({ name, email, password }) => {
-    // Use custom email handler for registration
+    // First create the user with Supabase Auth
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/confirm?type=signup&next=/dashboard`,
+        data: {
+          full_name: name
+        }
+      }
+    });
+    
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    
+    // Check if user needs email confirmation
+    if (data.user && !data.session) {
+      return { success: true, needsConfirmation: true };
+    }
+    
+    return { success: true, needsConfirmation: false };
+  };
+
+  const resendConfirmationEmail = async (email) => {
     const { data, error } = await supabase.functions.invoke('custom-email-handler', {
       body: {
-        type: 'signup',
+        type: 'resend_confirmation',
         email,
-        password,
         redirectTo: `${window.location.origin}/auth/confirm?type=signup&next=/dashboard`
       }
     });
@@ -84,7 +107,7 @@ export const AuthProvider = ({ children }) => {
       return { success: false, error: error.message };
     }
     
-    return { success: true, needsConfirmation: true };
+    return { success: true };
   };
 
   const logout = async () => {
@@ -128,6 +151,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     register,
+    resendConfirmationEmail,
     logout,
     updateProfile,
     upgradeToPremium,

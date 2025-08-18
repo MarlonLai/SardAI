@@ -31,14 +31,6 @@
     <priority>0.8</priority>
   </url>
   
-  <!-- Subscription Page -->
-  <url>
-    <loc>https://sardai.tech/subscription</loc>
-    <lastmod>2025-01-18</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  
   <!-- Legal Pages -->
   <url>
     <loc>https://sardai.tech/terms</loc>

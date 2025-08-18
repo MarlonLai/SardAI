@@ -4,23 +4,20 @@ Allow: /
 # Sitemap
 Sitemap: https://sardai.tech/sitemap.xml
 
-# Disallow admin pages
-Disallow: /admin
+# Disallow admin and auth pages
+Disallow: /admin/
 Disallow: /auth/
+Disallow: /stripe/processing
+Disallow: /stripe/error
 
-# Allow important pages
+# Allow important public pages
 Allow: /
 Allow: /login
 Allow: /register
-Allow: /subscription
 Allow: /features
 Allow: /terms
 Allow: /privacy
 Allow: /gdpr
 
-# Disallow temporary/processing pages
-Disallow: /stripe/processing
-Disallow: /stripe/error
-
-# Crawl delay (optional)
+# Crawl delay
 Crawl-delay: 1
