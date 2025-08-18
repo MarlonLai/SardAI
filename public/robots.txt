@@ -2,19 +2,25 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://comforting-cassata-a5ad1b.netlify.app/sitemap.xml
+Sitemap: https://sardai.tech/sitemap.xml
 
 # Disallow admin pages
 Disallow: /admin
+Disallow: /auth/
 
 # Allow important pages
 Allow: /
 Allow: /login
 Allow: /register
 Allow: /subscription
+Allow: /features
 Allow: /terms
 Allow: /privacy
 Allow: /gdpr
+
+# Disallow temporary/processing pages
+Disallow: /stripe/processing
+Disallow: /stripe/error
 
 # Crawl delay (optional)
 Crawl-delay: 1

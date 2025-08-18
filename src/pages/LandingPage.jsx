@@ -90,7 +90,7 @@ export default function LandingPage() {
             <div className="mt-4">
               <Button
                 variant="outline"
-                onClick={() => navigate('/premium')}
+                onClick={() => navigate('/features')}
                 className="border-yellow-400/50 text-yellow-400 hover:bg-yellow-400/10"
               >
                 <Crown className="w-4 h-4 mr-2" />
@@ -171,7 +171,7 @@ export default function LandingPage() {
                 <div className="mt-4">
                   <Button
                     variant="outline"
-                    onClick={() => navigate('/premium')}
+                    onClick={() => navigate('/features')}
                     className="border-yellow-400/50 text-yellow-400 hover:bg-yellow-400/10"
                   >
                     <Crown className="w-4 h-4 mr-2" />

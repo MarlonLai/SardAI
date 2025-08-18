@@ -37,7 +37,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
   const navigationItems = [
     { path: '/dashboard', label: 'Dashboard', icon: MessageCircle },
-    { path: '/premium', label: 'Funzionalità Premium', icon: Crown },
+    { path: '/features', label: 'Funzionalità Premium', icon: Crown },
     { path: '/profile', label: 'Profilo', icon: User },
     ...(profile?.role === 'admin' ? [{ path: '/admin', label: 'Admin', icon: Shield }] : []),
     ...(!profile?.is_premium ? [{ path: '/subscription', label: 'Diventa Premium', icon: Crown, highlight: true }] : [])

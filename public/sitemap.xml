@@ -2,53 +2,61 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <!-- Homepage -->
   <url>
-    <loc>https://comforting-cassata-a5ad1b.netlify.app/</loc>
-    <lastmod>2025-01-09</lastmod>
+    <loc>https://sardai.tech/</loc>
+    <lastmod>2025-01-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   
+  <!-- Features Page -->
+  <url>
+    <loc>https://sardai.tech/features</loc>
+    <lastmod>2025-01-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
   <!-- Authentication Pages -->
   <url>
-    <loc>https://comforting-cassata-a5ad1b.netlify.app/login</loc>
-    <lastmod>2025-01-09</lastmod>
+    <loc>https://sardai.tech/login</loc>
+    <lastmod>2025-01-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
-    <loc>https://comforting-cassata-a5ad1b.netlify.app/register</loc>
-    <lastmod>2025-01-09</lastmod>
+    <loc>https://sardai.tech/register</loc>
+    <lastmod>2025-01-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <!-- Subscription Page -->
   <url>
-    <loc>https://comforting-cassata-a5ad1b.netlify.app/subscription</loc>
-    <lastmod>2025-01-09</lastmod>
+    <loc>https://sardai.tech/subscription</loc>
+    <lastmod>2025-01-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   
   <!-- Legal Pages -->
   <url>
-    <loc>https://comforting-cassata-a5ad1b.netlify.app/terms</loc>
-    <lastmod>2025-01-09</lastmod>
+    <loc>https://sardai.tech/terms</loc>
+    <lastmod>2025-01-18</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   
   <url>
-    <loc>https://comforting-cassata-a5ad1b.netlify.app/privacy</loc>
-    <lastmod>2025-01-09</lastmod>
+    <loc>https://sardai.tech/privacy</loc>
+    <lastmod>2025-01-18</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   
   <url>
-    <loc>https://comforting-cassata-a5ad1b.netlify.app/gdpr</loc>
-    <lastmod>2025-01-09</lastmod>
+    <loc>https://sardai.tech/gdpr</loc>
+    <lastmod>2025-01-18</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>

@@ -56,7 +56,7 @@ function App() {
               <Route path="/gdpr" element={<GdprPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
-              <Route path="/premium" element={<PremiumFeaturesPage />} />
+              <Route path="/features" element={<PremiumFeaturesPage />} />
               
               {/* Auth Routes */}
               <Route path="/auth/error" element={<ErrorPage />} />
