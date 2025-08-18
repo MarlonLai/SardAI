@@ -84,6 +84,10 @@ Deno.serve(async (req: Request) => {
       throw new Error('Authentication failed')
     }
 
+    // Ensure user.id is not null
+    if (!user.id) {
+      throw new Error('User ID is missing')
+    }
     // Parse request body
     const { message, sessionId, chatType }: ChatRequest = await req.json()
 
@@ -107,6 +111,30 @@ Deno.serve(async (req: Request) => {
     // Check user plan status (skip for admin)
     let userPlan = null
     if (!isAdmin) {
+      // Ensure user has a subscription record
+      const { data: existingSubscription, error: subCheckError } = await supabaseClient
+        .from('user_subscriptions')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+
+      if (subCheckError && subCheckError.code === 'PGRST116') {
+        // No subscription found, create one with trial
+        const { error: createSubError } = await supabaseClient
+          .from('user_subscriptions')
+          .insert({
+            user_id: user.id,
+            plan_type: 'trial',
+            status: 'active',
+            trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          })
+
+        if (createSubError) {
+          console.error('Error creating subscription:', createSubError)
+          throw new Error('Failed to initialize user subscription')
+        }
+      }
+
       const { data: planStatus, error: planError } = await supabaseClient
         .rpc('get_user_plan_status', { user_uuid: user.id })
 
