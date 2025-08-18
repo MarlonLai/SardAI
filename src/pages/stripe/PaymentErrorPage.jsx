@@ -267,7 +267,6 @@ export default function PaymentErrorPage() {
             <p className="text-gray-400 text-sm italic">
               "Madonna mia! Qualcosa è andato storto, ma non ti preoccupare!" 😅
             </p>
-          </div>
         </motion.div>
       </div>
     </>
