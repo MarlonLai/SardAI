@@ -42,7 +42,17 @@ export default function RegisterPage() {
     if (formData.password.length < 6) {
       toast({
         title: "Errore",
-        description: "La password deve essere di almeno 6 caratteri",
+        description: "La password deve essere di almeno 6 caratteri con almeno una maiuscola e un numero",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Additional password validation
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      toast({
+        title: "Password troppo debole",
+        description: "La password deve contenere almeno una lettera minuscola, una maiuscola e un numero",
         variant: "destructive"
       });
       return;
@@ -105,12 +115,12 @@ export default function RegisterPage() {
   };
 
   const getPasswordStrength = (password) => {
-    if (password.length < 6) return { strength: 'weak', color: 'text-red-400', text: 'Troppo corta' };
-    if (password.length < 8) return { strength: 'medium', color: 'text-yellow-400', text: 'Media' };
+    if (password.length < 6) return { strength: 'weak', color: 'text-red-400', text: 'Troppo corta (min 6)' };
+    if (password.length < 8) return { strength: 'medium', color: 'text-yellow-400', text: 'Media (min 8 consigliati)' };
     if (password.match(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)) {
       return { strength: 'strong', color: 'text-green-400', text: 'Forte' };
     }
-    return { strength: 'medium', color: 'text-yellow-400', text: 'Media' };
+    return { strength: 'medium', color: 'text-yellow-400', text: 'Media (aggiungi numeri/maiuscole)' };
   };
 
   const passwordStrength = getPasswordStrength(formData.password);
@@ -291,7 +301,7 @@ export default function RegisterPage() {
                       id="password"
                       name="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Almeno 6 caratteri"
+                      placeholder="Almeno 6 caratteri (maiuscola + numero)"
                       value={formData.password}
                       onChange={handleChange}
                       required
