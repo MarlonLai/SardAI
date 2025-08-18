@@ -78,6 +78,7 @@ export const AuthProvider = ({ children }) => {
           full_name: name,
         },
         emailRedirectTo: `${window.location.origin}/dashboard`,
+        skipConfirmation: true,
       },
     });
     return { success: !error, error: error?.message };

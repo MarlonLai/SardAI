@@ -54,9 +54,9 @@ export default function RegisterPage() {
     if (result.success) {
       toast({
         title: "Benvenuto in SardAI! 🎉",
-        description: "Registrazione quasi completata! Controlla la tua email per confermare l'account."
+        description: "Registrazione completata con successo! Ora puoi accedere al tuo account."
       });
-      navigate('/login');
+      navigate('/dashboard');
     } else {
       toast({
         title: "Errore di registrazione",
