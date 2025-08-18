@@ -77,11 +77,25 @@ export const AuthProvider = ({ children }) => {
         data: {
           full_name: name,
         },
-        emailRedirectTo: `${window.location.origin}/dashboard`,
-        skipConfirmation: true,
+        emailRedirectTo: `${window.location.origin}/auth/confirm?type=signup&next=/dashboard`,
       },
     });
-    return { success: !error, error: error?.message };
+    
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    
+    // Check if user needs email confirmation
+    if (data.user && !data.user.email_confirmed_at) {
+      return { 
+        success: true, 
+        needsConfirmation: true, 
+        email: email,
+        message: 'Ti abbiamo inviato un\'email di conferma. Controlla la tua casella di posta per completare la registrazione.' 
+      };
+    }
+    
+    return { success: true, needsConfirmation: false };
   };
 
   const logout = async () => {
