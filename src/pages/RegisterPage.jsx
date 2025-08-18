@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
-import { Sparkles, Mail, Lock, User, ArrowLeft } from 'lucide-react';
+import { Sparkles, Mail, Lock, User, ArrowLeft, Eye, EyeOff, CheckCircle, Send } from 'lucide-react';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -21,10 +21,15 @@ export default function RegisterPage() {
     confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [registrationComplete, setRegistrationComplete] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validation
     if (formData.password !== formData.confirmPassword) {
       toast({
         title: "Errore",
@@ -43,6 +48,15 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!formData.name.trim()) {
+      toast({
+        title: "Errore",
+        description: "Il nome è obbligatorio",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     const result = await register({
@@ -52,15 +66,35 @@ export default function RegisterPage() {
     });
     
     if (result.success) {
-      toast({
-        title: "Benvenuto in SardAI! 🎉",
-        description: "Registrazione completata con successo! Ora puoi accedere al tuo account."
-      });
-      navigate('/dashboard');
+      if (result.needsConfirmation) {
+        setUserEmail(formData.email);
+        setRegistrationComplete(true);
+        toast({
+          title: "Registrazione completata! 📧",
+          description: result.message
+        });
+      } else {
+        toast({
+          title: "Benvenuto in SardAI! 🎉",
+          description: "Registrazione completata con successo! Ora puoi accedere al tuo account."
+        });
+        navigate('/dashboard');
+      }
     } else {
+      let errorMessage = result.error || "Si è verificato un errore durante la registrazione.";
+      
+      // Handle specific error cases
+      if (result.error?.includes('already registered') || result.error?.includes('already exists')) {
+        errorMessage = "Questo indirizzo email è già registrato. Prova ad accedere o usa un'altra email.";
+      } else if (result.error?.includes('invalid email')) {
+        errorMessage = "L'indirizzo email non è valido.";
+      } else if (result.error?.includes('weak password')) {
+        errorMessage = "La password è troppo debole. Usa almeno 6 caratteri.";
+      }
+      
       toast({
         title: "Errore di registrazione",
-        description: result.error || "Si è verificato un errore, l'utente potrebbe già esistere.",
+        description: errorMessage,
         variant: "destructive"
       });
     }
@@ -73,6 +107,100 @@ export default function RegisterPage() {
       [e.target.name]: e.target.value
     });
   };
+
+  const getPasswordStrength = (password) => {
+    if (password.length < 6) return { strength: 'weak', color: 'text-red-400', text: 'Troppo corta' };
+    if (password.length < 8) return { strength: 'medium', color: 'text-yellow-400', text: 'Media' };
+    if (password.match(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)) {
+      return { strength: 'strong', color: 'text-green-400', text: 'Forte' };
+    }
+    return { strength: 'medium', color: 'text-yellow-400', text: 'Media' };
+  };
+
+  const passwordStrength = getPasswordStrength(formData.password);
+
+  // Show success screen after registration
+  if (registrationComplete) {
+    return (
+      <>
+        <Helmet>
+          <title>Registrazione Completata - SardAI</title>
+          <meta name="description" content="Registrazione completata con successo. Controlla la tua email per confermare l'account." />
+        </Helmet>
+
+        <div className="min-h-screen sardinian-pattern flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="w-full max-w-md"
+          >
+            <Card className="sardinian-card">
+              <CardHeader className="text-center">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+                  className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4"
+                >
+                  <CheckCircle className="w-8 h-8 text-white" />
+                </motion.div>
+                <CardTitle className="text-2xl font-bold text-white">
+                  Registrazione Completata! 🎉
+                </CardTitle>
+              </CardHeader>
+              
+              <CardContent className="text-center space-y-6">
+                <p className="text-gray-300">
+                  Abbiamo inviato un'email di conferma a <strong>{userEmail}</strong>
+                </p>
+
+                <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4">
+                  <h3 className="text-blue-300 font-semibold mb-2">Prossimi passi:</h3>
+                  <ol className="text-blue-200 text-sm text-left space-y-1">
+                    <li>1. Controlla la tua casella di posta</li>
+                    <li>2. Cerca l'email da SardAI</li>
+                    <li>3. Clicca sul link di conferma</li>
+                    <li>4. Inizia a usare SardAI!</li>
+                  </ol>
+                </div>
+
+                <div className="space-y-3">
+                  <Button
+                    onClick={() => navigate('/login')}
+                    className="w-full sardinian-gradient hover:opacity-90"
+                  >
+                    Vai al Login
+                  </Button>
+
+                  <Button
+                    onClick={() => navigate('/auth/resend-confirmation')}
+                    variant="outline"
+                    className="w-full border-white/20 text-white hover:bg-white/10"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Non hai ricevuto l'email?
+                  </Button>
+                </div>
+
+                <div className="text-center pt-4 border-t border-slate-600">
+                  <p className="text-gray-400 text-sm">
+                    Hai bisogno di aiuto?{' '}
+                    <a 
+                      href="mailto:info@sardai.tech" 
+                      className="text-blue-400 hover:text-blue-300"
+                    >
+                      Contattaci
+                    </a>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -167,14 +295,28 @@ export default function RegisterPage() {
                     <Input
                       id="password"
                       name="password"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       placeholder="Almeno 6 caratteri"
                       value={formData.password}
                       onChange={handleChange}
                       required
-                      className="pl-10 bg-slate-800/50 border-slate-600 text-white placeholder:text-gray-400"
+                      className="pl-10 pr-10 bg-slate-800/50 border-slate-600 text-white placeholder:text-gray-400"
                     />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-1 top-1 h-8 w-8 text-gray-400 hover:text-gray-300"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
                   </div>
+                  {formData.password && (
+                    <p className={`text-xs ${passwordStrength.color}`}>
+                      Sicurezza: {passwordStrength.text}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -186,24 +328,58 @@ export default function RegisterPage() {
                     <Input
                       id="confirmPassword"
                       name="confirmPassword"
-                      type="password"
+                      type={showConfirmPassword ? "text" : "password"}
                       placeholder="Ripeti la password"
                       value={formData.confirmPassword}
                       onChange={handleChange}
                       required
-                      className="pl-10 bg-slate-800/50 border-slate-600 text-white placeholder:text-gray-400"
+                      className="pl-10 pr-10 bg-slate-800/50 border-slate-600 text-white placeholder:text-gray-400"
                     />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-1 top-1 h-8 w-8 text-gray-400 hover:text-gray-300"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
                   </div>
+                  {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                    <p className="text-xs text-red-400">
+                      Le password non coincidono
+                    </p>
+                  )}
                 </div>
 
                 <Button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || formData.password !== formData.confirmPassword || !formData.name.trim()}
                   className="w-full sardinian-gradient hover:opacity-90 text-lg py-3"
                 >
-                  {loading ? 'Registrazione in corso...' : 'Crea Account'}
+                  {loading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Registrazione in corso...</span>
+                    </div>
+                  ) : (
+                    'Crea Account'
+                  )}
                 </Button>
               </form>
+
+              <div className="mt-6 text-center">
+                <p className="text-gray-400 text-xs">
+                  Registrandoti accetti i nostri{' '}
+                  <Link to="/terms" className="text-blue-400 hover:text-blue-300">
+                    Termini di Servizio
+                  </Link>
+                  {' '}e la{' '}
+                  <Link to="/privacy" className="text-blue-400 hover:text-blue-300">
+                    Privacy Policy
+                  </Link>
+                </p>
+              </div>
 
               <div className="mt-6 text-center">
                 <p className="text-gray-300">
