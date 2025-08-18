@@ -108,6 +108,88 @@ export default function RegisterPage() {
 
   const passwordStrength = getPasswordStrength(formData.password);
 
+  // Success screen after registration
+  if (registrationSuccess) {
+    return (
+      <>
+        <Helmet>
+          <title>Conferma Email - SardAI</title>
+          <meta name="description" content="Controlla la tua email per confermare l'account SardAI." />
+        </Helmet>
+
+        <div className="min-h-screen sardinian-pattern flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="w-full max-w-md"
+          >
+            <Card className="sardinian-card">
+              <CardHeader className="text-center">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+                  className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4"
+                >
+                  <Send className="w-8 h-8 text-white" />
+                </motion.div>
+                <CardTitle className="text-2xl font-bold text-white">
+                  Registrazione Completata! 🎉
+                </CardTitle>
+              </CardHeader>
+              
+              <CardContent className="text-center space-y-6">
+                <p className="text-gray-300">
+                  Abbiamo inviato un'email di conferma a <strong>{userEmail}</strong>
+                </p>
+
+                <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4">
+                  <h3 className="text-blue-300 font-semibold mb-2">Prossimi passi:</h3>
+                  <ol className="text-blue-200 text-sm text-left space-y-1">
+                    <li>1. Controlla la tua casella di posta</li>
+                    <li>2. Cerca l'email da SardAI (info@sardai.tech)</li>
+                    <li>3. Clicca sul link di conferma</li>
+                    <li>4. Inizia a usare SardAI!</li>
+                  </ol>
+                </div>
+
+                <div className="space-y-3">
+                  <Button
+                    onClick={() => navigate('/login')}
+                    className="w-full sardinian-gradient hover:opacity-90"
+                  >
+                    Vai al Login
+                  </Button>
+
+                  <Button
+                    onClick={() => navigate('/auth/resend-confirmation')}
+                    variant="outline"
+                    className="w-full border-white/20 text-white hover:bg-white/10"
+                  >
+                    Non hai ricevuto l'email?
+                  </Button>
+                </div>
+
+                <div className="text-center pt-4 border-t border-slate-600">
+                  <p className="text-gray-400 text-sm">
+                    Controlla anche la cartella spam. Hai problemi?{' '}
+                    <a 
+                      href="mailto:info@sardai.tech" 
+                      className="text-blue-400 hover:text-blue-300"
+                    >
+                      Contattaci
+                    </a>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <Helmet>

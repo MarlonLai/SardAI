@@ -49,7 +49,7 @@ Deno.serve(async (req: Request) => {
         case 'signup':
           result = await supabaseClient.auth.signUp({
             email,
-            password: 'temp-password', // This will be reset
+            password: 'TempPassword123!', // Temporary password for email confirmation
             options: {
               emailRedirectTo: redirectTo || `${baseUrl}/auth/confirm?type=signup`
             }

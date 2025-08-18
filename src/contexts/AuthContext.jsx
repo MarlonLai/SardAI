@@ -77,6 +77,7 @@ export const AuthProvider = ({ children }) => {
         data: {
           full_name: name,
         },
+        emailRedirectTo: `${window.location.origin}/auth/confirm?type=signup&next=/dashboard`
       },
     });
     
@@ -84,7 +85,7 @@ export const AuthProvider = ({ children }) => {
       return { success: false, error: error.message };
     }
     
-    return { success: true, needsConfirmation: false };
+    return { success: true, needsConfirmation: !data.user?.email_confirmed_at };
   };
 
   const logout = async () => {
