@@ -37,7 +37,8 @@ import {
   FileText,
   Camera,
   Music,
-  Palette
+  Palette,
+  User
 } from 'lucide-react';
 
 export default function PremiumFeaturesPage() {
