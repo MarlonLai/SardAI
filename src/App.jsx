@@ -23,6 +23,11 @@ import SuccessPage from '@/pages/auth/SuccessPage.jsx';
 import ResetPasswordPage from '@/pages/auth/ResetPasswordPage.jsx';
 import ResendConfirmationPage from '@/pages/auth/ResendConfirmationPage.jsx';
 import CallbackPage from '@/pages/auth/CallbackPage.jsx';
+import CheckoutSuccessPage from '@/pages/stripe/CheckoutSuccessPage.jsx';
+import CheckoutCancelPage from '@/pages/stripe/CheckoutCancelPage.jsx';
+import PaymentProcessingPage from '@/pages/stripe/PaymentProcessingPage.jsx';
+import PaymentErrorPage from '@/pages/stripe/PaymentErrorPage.jsx';
+import SubscriptionManagePage from '@/pages/stripe/SubscriptionManagePage.jsx';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer.jsx';
 
@@ -58,6 +63,20 @@ function App() {
               <Route path="/auth/resend-confirmation" element={<ResendConfirmationPage />} />
               <Route path="/auth/callback" element={<CallbackPage />} />
               <Route path="/auth/confirm" element={<CallbackPage />} />
+              
+              {/* Stripe Routes */}
+              <Route path="/stripe/success" element={<CheckoutSuccessPage />} />
+              <Route path="/stripe/cancel" element={<CheckoutCancelPage />} />
+              <Route path="/stripe/processing" element={<PaymentProcessingPage />} />
+              <Route path="/stripe/error" element={<PaymentErrorPage />} />
+              <Route 
+                path="/stripe/manage" 
+                element={
+                  <ProtectedRoute>
+                    <SubscriptionManagePage />
+                  </ProtectedRoute>
+                } 
+              />
               
               <Route 
                 path="/chat" 

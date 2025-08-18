@@ -13,8 +13,8 @@ export const useStripe = () => {
         body: {
           price_id: priceId,
           mode,
-          success_url: `${window.location.origin}/subscription?payment=success`,
-          cancel_url: `${window.location.origin}/subscription?payment=canceled`
+          success_url: `${window.location.origin}/stripe/success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${window.location.origin}/stripe/cancel?session_id={CHECKOUT_SESSION_ID}`
         }
       });
 
@@ -42,7 +42,7 @@ export const useStripe = () => {
   const handlePaymentSuccess = () => {
     toast({
       title: "Pagamento completato! 🎉",
-      description: "Grazie per il tuo acquisto! Il tuo abbonamento è ora attivo.",
+      description: "Benvenuto in SardAI Premium! Il tuo abbonamento è ora attivo.",
     });
   };
 
@@ -50,14 +50,36 @@ export const useStripe = () => {
     toast({
       title: "Pagamento annullato",
       description: "Il pagamento è stato annullato. Puoi riprovare quando vuoi.",
-      variant: "destructive",
     });
+  };
+
+  const redirectToStripePortal = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('stripe-portal', {
+        body: {
+          return_url: `${window.location.origin}/stripe/manage`
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile accedere al portale di gestione.",
+        variant: "destructive",
+      });
+    }
   };
 
   return {
     loading,
     createCheckoutSession,
     handlePaymentSuccess,
-    handlePaymentCanceled
+    handlePaymentCanceled,
+    redirectToStripePortal
   };
 };
