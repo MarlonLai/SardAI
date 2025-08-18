@@ -5,10 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
+import MessageLimitIndicator from '@/components/chat/MessageLimitIndicator';
+import MessageLimitBlocker from '@/components/chat/MessageLimitBlocker';
+import { useMessageLimits } from '@/hooks/useMessageLimits';
 
-export default function FreeChatbot({ messages, onSendMessage, loading, planStatus }) {
+export default function FreeChatbot({ messages, onSendMessage, loading, planStatus, limits, isLimitReached }) {
   const [message, setMessage] = useState('');
   const messagesEndRef = useRef(null);
+  const { getTimeUntilReset } = useMessageLimits();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -22,6 +26,10 @@ export default function FreeChatbot({ messages, onSendMessage, loading, planStat
     e.preventDefault();
     if (!message.trim() || loading) return;
 
+    // Check limits before sending
+    if (isLimitReached) {
+      return;
+    }
     const result = await onSendMessage(message, 'free');
     if (result?.success) {
       setMessage('');
@@ -54,7 +62,23 @@ export default function FreeChatbot({ messages, onSendMessage, loading, planStat
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto space-y-4">
+        {/* Message Limit Indicator */}
+        {limits && limits.plan === 'free' && (
+          <MessageLimitIndicator 
+            limits={limits} 
+            timeUntilReset={getTimeUntilReset()} 
+          />
+        )}
+
+        {/* Show limit blocker if reached */}
+        {isLimitReached ? (
+          <MessageLimitBlocker 
+            limits={limits} 
+            timeUntilReset={getTimeUntilReset()} 
+          />
+        ) : (
+          <div className="p-4 space-y-4">
         {messages.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -133,21 +157,28 @@ export default function FreeChatbot({ messages, onSendMessage, loading, planStat
         )}
 
         <div ref={messagesEndRef} />
+          </div>
+        )}
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-slate-600 bg-slate-800/30">
+      {!isLimitReached && (
+        <div className="p-4 border-t border-slate-600 bg-slate-800/30">
         <form onSubmit={handleSubmit} className="flex space-x-2">
           <Input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Scrivi il tuo messaggio..."
-            disabled={loading}
+            placeholder={
+              limits && limits.plan === 'free' 
+                ? `Scrivi il tuo messaggio... (${limits.messages_remaining} rimasti oggi)`
+                : "Scrivi il tuo messaggio..."
+            }
+            disabled={loading || isLimitReached}
             className="bg-slate-800/50 border-slate-600 text-white placeholder:text-gray-400"
           />
           <Button
             type="submit"
-            disabled={!message.trim() || loading}
+            disabled={!message.trim() || loading || isLimitReached}
             className="sardinian-gradient hover:opacity-90"
           >
             {loading ? (
@@ -168,7 +199,8 @@ export default function FreeChatbot({ messages, onSendMessage, loading, planStat
             )}
           </div>
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

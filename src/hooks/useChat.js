@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import { useMessageLimits } from '@/hooks/useMessageLimits';
 
 export const useChat = () => {
   const [sessions, setSessions] = useState([]);
@@ -11,6 +12,13 @@ export const useChat = () => {
   const [planStatus, setPlanStatus] = useState(null);
   const { user, profile } = useAuth();
   const { toast } = useToast();
+  const { 
+    limits, 
+    incrementMessageCount, 
+    checkCanSendMessage, 
+    fetchLimits,
+    isLimitReached 
+  } = useMessageLimits();
 
   // Fetch user plan status
   const fetchPlanStatus = useCallback(async () => {
@@ -74,8 +82,22 @@ export const useChat = () => {
   const sendMessage = useCallback(async (message, chatType = 'free', sessionId = null) => {
     if (!message.trim()) return null;
 
+    // Check message limits for free users
+    if (chatType === 'free' && !checkCanSendMessage()) {
+      toast({
+        title: "🚫 Limite messaggi raggiunto!",
+        description: "Hai utilizzato tutti i 5 messaggi gratuiti di oggi. Torna domani o passa a Premium!",
+        variant: "destructive",
+      });
+      return { success: false, error: 'DAILY_LIMIT_REACHED' };
+    }
     setLoading(true);
     try {
+      // Increment message count for free users before sending
+      if (chatType === 'free' && limits && limits.plan === 'free') {
+        await incrementMessageCount();
+      }
+
       const { data, error } = await supabase.functions.invoke('chat-openai', {
         body: {
           message: message.trim(),
@@ -102,6 +124,10 @@ export const useChat = () => {
         setPlanStatus(data.planStatus);
       }
 
+      // Refresh limits after successful message
+      if (chatType === 'free') {
+        await fetchLimits();
+      }
       return {
         success: true,
         sessionId: data.sessionId,
@@ -121,6 +147,9 @@ export const useChat = () => {
         return { success: false, error: 'PREMIUM_REQUIRED' };
       }
 
+      if (error.message?.includes('DAILY_LIMIT_REACHED')) {
+        return { success: false, error: 'DAILY_LIMIT_REACHED' };
+      }
       toast({
         title: "Errore nell'invio del messaggio",
         description: error.message || "Si è verificato un errore imprevisto.",
@@ -131,7 +160,7 @@ export const useChat = () => {
     } finally {
       setLoading(false);
     }
-  }, [toast, fetchSessions, fetchMessages]);
+  }, [toast, fetchSessions, fetchMessages, checkCanSendMessage, incrementMessageCount, limits, fetchLimits]);
 
   // Create new session
   const createSession = useCallback(async (title = 'Nuova Chat', chatType = 'free') => {
@@ -212,11 +241,14 @@ export const useChat = () => {
     messages,
     loading,
     planStatus,
+    limits,
+    isLimitReached,
     sendMessage,
     createSession,
     deleteSession,
     selectSession,
     fetchPlanStatus,
-    fetchSessions
+    fetchSessions,
+    checkCanSendMessage
   };
 };

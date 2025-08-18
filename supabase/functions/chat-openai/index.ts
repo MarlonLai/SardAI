@@ -96,6 +96,18 @@ Deno.serve(async (req: Request) => {
       throw new Error('Message and chat type are required')
     }
 
+    // Check daily message limits for free users
+    if (chatType === 'free') {
+      const { data: canSend, error: limitError } = await supabaseClient
+        .rpc('can_send_message', { user_uuid: user.id })
+
+      if (limitError) {
+        console.error('Error checking message limits:', limitError)
+        // Continue anyway to avoid blocking users on error
+      } else if (canSend && !canSend.can_send && canSend.plan === 'free') {
+        throw new Error('Limite messaggi giornalieri raggiunto. Torna domani o passa a Premium!')
+      }
+    }
     // Get user profile to check admin status
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
@@ -200,6 +212,16 @@ Deno.serve(async (req: Request) => {
 
     if (userMessageError) throw userMessageError
 
+    // Increment daily message count for free users
+    if (chatType === 'free' && !isAdmin) {
+      const { error: incrementError } = await supabaseClient
+        .rpc('increment_daily_message_count', { user_uuid: user.id })
+      
+      if (incrementError) {
+        console.error('Error incrementing message count:', incrementError)
+        // Continue anyway to avoid blocking the conversation
+      }
+    }
     // Prepare messages for OpenAI
     const messages = [
       {

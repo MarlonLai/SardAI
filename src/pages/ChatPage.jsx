@@ -42,11 +42,14 @@ export default function ChatPage() {
     messages,
     loading,
     planStatus,
+    limits,
+    isLimitReached,
     sendMessage,
     createSession,
     deleteSession,
     selectSession,
-    fetchPlanStatus
+    fetchPlanStatus,
+    checkCanSendMessage
   } = useChat();
 
   // Handle payment status from URL params
@@ -337,6 +340,8 @@ export default function ChatPage() {
                     onSendMessage={sendMessage}
                     loading={loading}
                     planStatus={planStatus}
+                    limits={limits}
+                    isLimitReached={isLimitReached}
                   />
                 </TabsContent>
 
