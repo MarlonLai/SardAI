@@ -86,6 +86,17 @@ export default function LandingPage() {
               <MessageSquare className="w-6 h-6 mr-3" />
               Inizia a Chiacchierare
             </Button>
+            
+            <div className="mt-4">
+              <Button
+                variant="outline"
+                onClick={() => navigate('/premium')}
+                className="border-yellow-400/50 text-yellow-400 hover:bg-yellow-400/10"
+              >
+                <Crown className="w-4 h-4 mr-2" />
+                Scopri Premium
+              </Button>
+            </div>
           </motion.div>
         </section>
 
@@ -156,6 +167,17 @@ export default function LandingPage() {
                   <Sparkles className="w-6 h-6 mr-3" />
                   Crea il tuo Account
                 </Button>
+                
+                <div className="mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/premium')}
+                    className="border-yellow-400/50 text-yellow-400 hover:bg-yellow-400/10"
+                  >
+                    <Crown className="w-4 h-4 mr-2" />
+                    Scopri Tutte le Funzionalità
+                  </Button>
+                </div>
             </div>
           </motion.div>
         </section>

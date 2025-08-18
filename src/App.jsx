@@ -18,6 +18,7 @@ import NotFoundPage from '@/pages/NotFoundPage.jsx';
 import GdprPage from '@/pages/GdprPage.jsx';
 import TermsPage from '@/pages/TermsPage.jsx';
 import PrivacyPage from '@/pages/PrivacyPage.jsx';
+import PremiumFeaturesPage from '@/pages/PremiumFeaturesPage.jsx';
 import ErrorPage from '@/pages/auth/ErrorPage.jsx';
 import SuccessPage from '@/pages/auth/SuccessPage.jsx';
 import ResetPasswordPage from '@/pages/auth/ResetPasswordPage.jsx';
@@ -55,6 +56,7 @@ function App() {
               <Route path="/gdpr" element={<GdprPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/premium" element={<PremiumFeaturesPage />} />
               
               {/* Auth Routes */}
               <Route path="/auth/error" element={<ErrorPage />} />

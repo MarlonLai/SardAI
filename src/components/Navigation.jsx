@@ -33,6 +33,7 @@ export default function Navigation() {
 
   const navigationItems = [
     { path: '/', label: 'Home', icon: Home, public: true },
+    { path: '/premium', label: 'Premium', icon: Crown, public: true },
     { path: '/dashboard', label: 'Dashboard', icon: MessageCircle, protected: true },
     { path: '/profile', label: 'Profilo', icon: User, protected: true },
     { path: '/subscription', label: 'Premium', icon: Crown, protected: true, premium: false },
