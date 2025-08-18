@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MessageSquare, BrainCircuit, FileDown, LayoutDashboard, Smile, ShieldCheck, Sparkles } from 'lucide-react';
+import { MessageSquare, BrainCircuit, FileDown, LayoutDashboard, Smile, ShieldCheck, Sparkles, Crown } from 'lucide-react';
 
 export default function LandingPage() {
   const navigate = useNavigate();
