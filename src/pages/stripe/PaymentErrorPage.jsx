@@ -270,6 +270,7 @@ export default function PaymentErrorPage() {
             </p>
           </motion.div>
         </motion.div>
+        </motion.div>
       </div>
     </>
   );
