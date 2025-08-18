@@ -266,6 +266,7 @@ export default function PaymentErrorPage() {
               "Madonna mia! Qualcosa è andato storto, ma non ti preoccupare!" 😅
             </p>
           </motion.div>
+          </motion.div>
         </motion.div>
       </div>
     </>
