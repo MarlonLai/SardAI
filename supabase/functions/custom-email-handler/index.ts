@@ -9,6 +9,7 @@ const corsHeaders = {
 interface EmailRequest {
   type: 'signup' | 'recovery' | 'resend_confirmation'
   email: string
+  password?: string
   redirectTo?: string
 }
 
@@ -36,10 +37,10 @@ Deno.serve(async (req: Request) => {
 
     if (req.method === 'POST') {
       // Parse request body for email actions
-      const { type, email, redirectTo }: EmailRequest = await req.json()
+      const { type, email, password, redirectTo }: EmailRequest = await req.json()
 
-      if (!type || !email) {
-        throw new Error('Type and email are required')
+      if (!type || !email || (type === 'signup' && !password)) {
+        throw new Error('Type, email and password (for signup) are required')
       }
 
       let result
@@ -47,9 +48,13 @@ Deno.serve(async (req: Request) => {
 
       switch (type) {
         case 'signup':
+          if (!password) {
+            throw new Error('Password is required for signup')
+          }
+          
           result = await supabaseClient.auth.signUp({
             email,
-            password: 'TempPassword123!', // Temporary password for email confirmation
+            password, // Use password provided by client
             options: {
               emailRedirectTo: redirectTo || `${baseUrl}/auth/confirm?type=signup`
             }

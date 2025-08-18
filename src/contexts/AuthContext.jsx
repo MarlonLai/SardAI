@@ -70,22 +70,21 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async ({ name, email, password }) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: name,
-        },
-        emailRedirectTo: `${window.location.origin}/auth/confirm?type=signup&next=/dashboard`
-      },
+    // Use custom email handler for registration
+    const { data, error } = await supabase.functions.invoke('custom-email-handler', {
+      body: {
+        type: 'signup',
+        email,
+        password,
+        redirectTo: `${window.location.origin}/auth/confirm?type=signup&next=/dashboard`
+      }
     });
     
     if (error) {
       return { success: false, error: error.message };
     }
     
-    return { success: true, needsConfirmation: !data.user?.email_confirmed_at };
+    return { success: true, needsConfirmation: true };
   };
 
   const logout = async () => {
