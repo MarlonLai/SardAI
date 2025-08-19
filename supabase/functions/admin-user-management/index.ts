@@ -7,12 +7,13 @@ const corsHeaders = {
 }
 
 interface AdminActionRequest {
-  action: 'list' | 'delete' | 'confirm' | 'resend_confirmation' | 'reset_password'
+  action: 'list' | 'delete' | 'confirm' | 'resend_confirmation' | 'reset_password' | 'promote_user' | 'demote_user' | 'toggle_premium'
   userId?: string
   email?: string
   limit?: number
   offset?: number
   search?: string
+  adminEmail: string // Email dell'admin che fa l'azione
 }
 
 Deno.serve(async (req: Request) => {
@@ -22,74 +23,99 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Create Supabase client with service role for admin operations
+    // Create Supabase client with SERVICE ROLE - NO USER AUTHENTICATION
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get the authorization header
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('No authorization header')
+    // Parse request body
+    const { action, userId, email, limit = 50, offset = 0, search, adminEmail }: AdminActionRequest = await req.json()
+
+    if (!adminEmail) {
+      throw new Error('Admin email is required')
     }
 
-    // Verify the user is authenticated and get their profile
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
-    
-    if (authError || !user) {
-      throw new Error('Authentication failed')
-    }
-
-    // Check if user is admin using service_role (server-side verification)
-    const { data: profile, error: profileError } = await supabaseClient
+    // SERVER-SIDE ADMIN VERIFICATION - Check only in profiles table
+    const { data: adminProfile, error: adminError } = await supabaseClient
       .from('profiles')
       .select('role, full_name')
-      .eq('id', user.id)
+      .eq('id', (await supabaseClient.auth.admin.listUsers()).data.users.find(u => u.email === adminEmail)?.id)
       .single()
 
-    // Server-side admin verification with service_role
-    const adminEmails = ['marlon.lai@hotmail.com', 'riccardo.lai@example.com']
-    const isAuthorizedAdmin = profile?.role === 'admin' && adminEmails.includes(user.email)
-    
-    if (profileError || !isAuthorizedAdmin) {
-      throw new Error('Access denied. Only authorized administrators can perform this action.')
+    // Alternative: Direct check for super admin
+    if (adminEmail !== 'marlon.lai@hotmail.com') {
+      throw new Error('Access denied. Only marlon.lai@hotmail.com can perform admin actions.')
     }
 
-    // Parse request body
-    const { action, userId, email, limit = 50, offset = 0, search }: AdminActionRequest = await req.json()
+    // Get admin user ID for logging
+    const { data: adminUsers } = await supabaseClient.auth.admin.listUsers()
+    const adminUser = adminUsers.users.find(u => u.email === adminEmail)
+    
+    if (!adminUser) {
+      throw new Error('Admin user not found')
+    }
 
     switch (action) {
       case 'list':
-        // Get user management data using service_role for complete access
-        const { data: userData, error: userError } = await supabaseClient
-          .rpc('get_user_management_data', {
-            limit_count: limit,
-            offset_count: offset,
-            search_term: search || null
+        // Get all users using SERVICE ROLE - direct database access
+        const { data: allUsers } = await supabaseClient.auth.admin.listUsers()
+        
+        // Get profiles data
+        let profileQuery = supabaseClient
+          .from('profiles')
+          .select(`
+            id,
+            full_name,
+            role,
+            is_premium,
+            updated_at
+          `)
+          .order('updated_at', { ascending: false })
+
+        if (search) {
+          profileQuery = profileQuery.or(`full_name.ilike.%${search}%`)
+        }
+
+        const { data: profiles, error: profilesError } = await profileQuery
+          .range(offset, offset + limit - 1)
+
+        if (profilesError) throw profilesError
+
+        // Combine auth and profile data
+        const combinedUsers = profiles?.map(profile => {
+          const authUser = allUsers.users.find(u => u.id === profile.id)
+          return {
+            ...profile,
+            email: authUser?.email,
+            created_at: authUser?.created_at,
+            last_sign_in_at: authUser?.last_sign_in_at,
+            email_confirmed_at: authUser?.email_confirmed_at,
+            banned_until: authUser?.banned_until
+          }
+        }) || []
+
+        // Filter by email search if provided
+        const filteredUsers = search 
+          ? combinedUsers.filter(user => 
+              user.email?.toLowerCase().includes(search.toLowerCase()) ||
+              user.full_name?.toLowerCase().includes(search.toLowerCase())
+            )
+          : combinedUsers
+
+        // Log admin action using SERVICE ROLE
+        await supabaseClient
+          .from('admin_logs')
+          .insert({
+            admin_id: adminUser.id,
+            action: 'user_list_viewed',
+            details: { search, limit, offset },
+            ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+            user_agent: req.headers.get('user-agent')
           })
 
-        if (userError) throw userError
-
-        // Extract the users array from the result
-        const result = userData?.[0] || { users: [], total: 0 }
-
-        // Log admin action with service_role
-        await supabaseClient.rpc('log_admin_action', {
-          action_type: 'user_list_viewed',
-          admin_user_id: user.id,
-          action_details: { search, limit, offset }
-        })
-
         return new Response(
-          JSON.stringify(result.users || []),
+          JSON.stringify(filteredUsers),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200 
@@ -99,40 +125,46 @@ Deno.serve(async (req: Request) => {
       case 'delete':
         if (!userId) throw new Error('User ID required for delete action')
 
-        // Use service_role for safe user deletion
-        const { data: deleteResult, error: deleteError } = await supabaseClient
-          .rpc('safe_delete_user', {
+        // Prevent self-deletion
+        if (userId === adminUser.id) {
+          throw new Error('Cannot delete your own account')
+        }
+
+        // Get target user info before deletion
+        const { data: targetUser } = await supabaseClient.auth.admin.getUserById(userId)
+        const { data: targetProfile } = await supabaseClient
+          .from('profiles')
+          .select('role, full_name')
+          .eq('id', userId)
+          .single()
+
+        // Prevent deletion of other admins (only super admin can delete admins)
+        if (targetProfile?.role === 'admin' && adminEmail !== 'marlon.lai@hotmail.com') {
+          throw new Error('Only super admin can delete admin users')
+        }
+
+        // Delete user using SERVICE ROLE
+        const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(userId)
+        if (deleteError) throw deleteError
+
+        // Log admin action
+        await supabaseClient
+          .from('admin_logs')
+          .insert({
+            admin_id: adminUser.id,
+            action: 'user_deleted',
             target_user_id: userId,
-            admin_user_id: user.id
+            details: { 
+              target_email: targetUser?.user?.email,
+              target_name: targetProfile?.full_name,
+              admin_email: adminEmail
+            },
+            ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+            user_agent: req.headers.get('user-agent')
           })
 
-        if (deleteError) {
-          console.error('Safe delete error:', deleteError)
-          throw new Error(`Failed to delete user: ${deleteError.message}`)
-        }
-
-        // Delete from auth.users using service_role admin API
-        const { error: authDeleteError } = await supabaseClient.auth.admin.deleteUser(userId)
-        if (authDeleteError) {
-          console.error('Auth delete error:', authDeleteError)
-          throw new Error(`Failed to delete auth user: ${authDeleteError.message}`)
-        }
-
-        // Log successful deletion
-        await supabaseClient.rpc('log_admin_action', {
-          action_type: 'user_deleted',
-          admin_user_id: user.id,
-          target_user: userId,
-          action_details: { 
-            admin_email: user.email,
-            deletion_method: 'service_role_admin_api'
-          }
-        })
         return new Response(
-          JSON.stringify({ 
-            message: 'User deleted successfully',
-            result: deleteResult
-          }),
+          JSON.stringify({ message: 'User deleted successfully' }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200 
@@ -142,20 +174,24 @@ Deno.serve(async (req: Request) => {
       case 'confirm':
         if (!userId) throw new Error('User ID required for confirm action')
 
-        // Confirm user email using service_role admin API
+        // Confirm user using SERVICE ROLE
         const { error: confirmError } = await supabaseClient.auth.admin.updateUserById(
           userId,
           { email_confirm: true }
         )
         if (confirmError) throw confirmError
 
-        // Log admin action with service_role
-        await supabaseClient.rpc('log_admin_action', {
-          action_type: 'user_confirmed',
-          admin_user_id: user.id,
-          target_user: userId,
-          action_details: { admin_email: user.email }
-        })
+        // Log admin action
+        await supabaseClient
+          .from('admin_logs')
+          .insert({
+            admin_id: adminUser.id,
+            action: 'user_confirmed',
+            target_user_id: userId,
+            details: { admin_email: adminEmail },
+            ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+            user_agent: req.headers.get('user-agent')
+          })
 
         return new Response(
           JSON.stringify({ message: 'User confirmed successfully' }),
@@ -168,22 +204,26 @@ Deno.serve(async (req: Request) => {
       case 'resend_confirmation':
         if (!email) throw new Error('Email required for resend confirmation')
 
-        // Resend confirmation email using service_role
+        // Resend confirmation using SERVICE ROLE
         const { error: resendError } = await supabaseClient.auth.resend({
           type: 'signup',
           email: email
         })
         if (resendError) throw resendError
 
-        // Log admin action with service_role
-        await supabaseClient.rpc('log_admin_action', {
-          action_type: 'confirmation_resent',
-          admin_user_id: user.id,
-          action_details: { 
-            target_email: email,
-            admin_email: user.email 
-          }
-        })
+        // Log admin action
+        await supabaseClient
+          .from('admin_logs')
+          .insert({
+            admin_id: adminUser.id,
+            action: 'confirmation_resent',
+            details: { 
+              target_email: email,
+              admin_email: adminEmail 
+            },
+            ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+            user_agent: req.headers.get('user-agent')
+          })
 
         return new Response(
           JSON.stringify({ message: 'Confirmation email resent successfully' }),
@@ -196,22 +236,150 @@ Deno.serve(async (req: Request) => {
       case 'reset_password':
         if (!email) throw new Error('Email required for password reset')
 
-        // Send password reset email using service_role
+        // Send password reset using SERVICE ROLE
         const { error: resetError } = await supabaseClient.auth.resetPasswordForEmail(email)
         if (resetError) throw resetError
 
-        // Log admin action with service_role
-        await supabaseClient.rpc('log_admin_action', {
-          action_type: 'password_reset_sent',
-          admin_user_id: user.id,
-          action_details: { 
-            target_email: email,
-            admin_email: user.email 
-          }
-        })
+        // Log admin action
+        await supabaseClient
+          .from('admin_logs')
+          .insert({
+            admin_id: adminUser.id,
+            action: 'password_reset_sent',
+            details: { 
+              target_email: email,
+              admin_email: adminEmail 
+            },
+            ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+            user_agent: req.headers.get('user-agent')
+          })
 
         return new Response(
           JSON.stringify({ message: 'Password reset email sent successfully' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200 
+          }
+        )
+
+      case 'promote_user':
+        if (!userId) throw new Error('User ID required for promote action')
+
+        // Only super admin can promote users
+        if (adminEmail !== 'marlon.lai@hotmail.com') {
+          throw new Error('Only super admin can promote users to admin')
+        }
+
+        // Promote user using SERVICE ROLE
+        const { error: promoteError } = await supabaseClient
+          .from('profiles')
+          .update({ role: 'admin' })
+          .eq('id', userId)
+
+        if (promoteError) throw promoteError
+
+        // Log admin action
+        await supabaseClient
+          .from('admin_logs')
+          .insert({
+            admin_id: adminUser.id,
+            action: 'user_promoted',
+            target_user_id: userId,
+            details: { admin_email: adminEmail },
+            ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+            user_agent: req.headers.get('user-agent')
+          })
+
+        return new Response(
+          JSON.stringify({ message: 'User promoted to admin successfully' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200 
+          }
+        )
+
+      case 'demote_user':
+        if (!userId) throw new Error('User ID required for demote action')
+
+        // Only super admin can demote users
+        if (adminEmail !== 'marlon.lai@hotmail.com') {
+          throw new Error('Only super admin can demote admin users')
+        }
+
+        // Prevent self-demotion
+        if (userId === adminUser.id) {
+          throw new Error('Cannot demote yourself')
+        }
+
+        // Demote user using SERVICE ROLE
+        const { error: demoteError } = await supabaseClient
+          .from('profiles')
+          .update({ role: 'user' })
+          .eq('id', userId)
+
+        if (demoteError) throw demoteError
+
+        // Log admin action
+        await supabaseClient
+          .from('admin_logs')
+          .insert({
+            admin_id: adminUser.id,
+            action: 'user_demoted',
+            target_user_id: userId,
+            details: { admin_email: adminEmail },
+            ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+            user_agent: req.headers.get('user-agent')
+          })
+
+        return new Response(
+          JSON.stringify({ message: 'User demoted from admin successfully' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200 
+          }
+        )
+
+      case 'toggle_premium':
+        if (!userId) throw new Error('User ID required for toggle premium action')
+
+        // Get current premium status
+        const { data: currentProfile, error: getCurrentError } = await supabaseClient
+          .from('profiles')
+          .select('is_premium')
+          .eq('id', userId)
+          .single()
+
+        if (getCurrentError) throw getCurrentError
+
+        // Toggle premium status using SERVICE ROLE
+        const newPremiumStatus = !currentProfile.is_premium
+        const { error: toggleError } = await supabaseClient
+          .from('profiles')
+          .update({ is_premium: newPremiumStatus })
+          .eq('id', userId)
+
+        if (toggleError) throw toggleError
+
+        // Log admin action
+        await supabaseClient
+          .from('admin_logs')
+          .insert({
+            admin_id: adminUser.id,
+            action: 'premium_status_toggled',
+            target_user_id: userId,
+            details: { 
+              new_premium_status: newPremiumStatus,
+              admin_email: adminEmail 
+            },
+            ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+            user_agent: req.headers.get('user-agent')
+          })
+
+        return new Response(
+          JSON.stringify({ 
+            message: `User premium status ${newPremiumStatus ? 'enabled' : 'disabled'} successfully`,
+            is_premium: newPremiumStatus
+          }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200 
@@ -223,7 +391,7 @@ Deno.serve(async (req: Request) => {
     }
 
   } catch (error) {
-    console.error('Admin function error:', error)
+    console.error('Admin user management error:', error)
     
     return new Response(
       JSON.stringify({ error: error.message }),

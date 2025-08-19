@@ -13,6 +13,7 @@ interface ReportActionRequest {
   notes?: string
   limit?: number
   offset?: number
+  adminEmail: string
 }
 
 Deno.serve(async (req: Request) => {
@@ -22,52 +23,36 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Create Supabase client
+    // Create Supabase client with SERVICE ROLE ONLY
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get the authorization header
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('No authorization header')
-    }
-
-    // Verify the user is authenticated
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
-    
-    if (authError || !user) {
-      throw new Error('Authentication failed')
-    }
-
-    // Check if user is admin
-    const { data: profile, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || profile?.role !== 'admin' || user.email !== 'marlon.lai@hotmail.com') {
-      const adminEmails = ['marlon.lai@hotmail.com', 'riccardo.lai@example.com']
-      if (profileError || profile?.role !== 'admin' || !adminEmails.includes(user.email)) {
-        throw new Error('Access denied. Only authorized admins can access this function.')
-      }
-    }
-
     // Parse request body
-    const { action, reportId, status, notes, limit = 50, offset = 0 }: ReportActionRequest = await req.json()
+    const { action, reportId, status, notes, limit = 50, offset = 0, adminEmail }: ReportActionRequest = await req.json()
+
+    if (!adminEmail) {
+      throw new Error('Admin email is required')
+    }
+
+    // SERVER-SIDE ADMIN VERIFICATION - Only check for authorized admins
+    const authorizedAdmins = ['marlon.lai@hotmail.com', 'riccardo.lai@example.com']
+    if (!authorizedAdmins.includes(adminEmail)) {
+      throw new Error('Access denied. Only authorized administrators can access reports.')
+    }
+
+    // Get admin user for logging
+    const { data: adminUsers } = await supabaseClient.auth.admin.listUsers()
+    const adminUser = adminUsers.users.find(u => u.email === adminEmail)
+
+    if (!adminUser) {
+      throw new Error('Admin user not found')
+    }
 
     switch (action) {
       case 'list':
-        // Get reports without automatic joins
+        // Get reports using SERVICE ROLE
         const { data: reports, error: reportsError } = await supabaseClient
           .from('user_reports')
           .select(`
@@ -88,7 +73,7 @@ Deno.serve(async (req: Request) => {
 
         if (reportsError) throw reportsError
 
-        // Manually fetch user details for each report
+        // Manually fetch user details using SERVICE ROLE
         const enrichedReports = await Promise.all((reports || []).map(async (report) => {
           const enrichedReport = { ...report }
 
@@ -143,11 +128,16 @@ Deno.serve(async (req: Request) => {
           return enrichedReport
         }))
 
-        // Log admin action
-        await supabaseClient.rpc('log_admin_action', {
-          action_type: 'reports_viewed',
-          action_details: { limit, offset }
-        })
+        // Log admin action using SERVICE ROLE
+        await supabaseClient
+          .from('admin_logs')
+          .insert({
+            admin_id: adminUser.id,
+            action: 'reports_viewed',
+            details: { limit, offset },
+            ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+            user_agent: req.headers.get('user-agent')
+          })
 
         return new Response(
           JSON.stringify(enrichedReports),
@@ -160,12 +150,12 @@ Deno.serve(async (req: Request) => {
       case 'update_status':
         if (!reportId || !status) throw new Error('Report ID and status required')
 
-        // Update report status
+        // Update report status using SERVICE ROLE
         const { data: updatedReport, error: updateError } = await supabaseClient
           .from('user_reports')
           .update({
             status,
-            resolved_by: status === 'resolved' ? user.id : null,
+            resolved_by: status === 'resolved' ? adminUser.id : null,
             resolved_at: status === 'resolved' ? new Date().toISOString() : null,
             admin_notes: notes || null
           })
@@ -175,15 +165,20 @@ Deno.serve(async (req: Request) => {
 
         if (updateError) throw updateError
 
-        // Log admin action
-        await supabaseClient.rpc('log_admin_action', {
-          action_type: 'report_status_updated',
-          action_details: { 
-            report_id: reportId,
-            new_status: status,
-            admin_email: user.email 
-          }
-        })
+        // Log admin action using SERVICE ROLE
+        await supabaseClient
+          .from('admin_logs')
+          .insert({
+            admin_id: adminUser.id,
+            action: 'report_status_updated',
+            details: { 
+              report_id: reportId,
+              new_status: status,
+              admin_email: adminEmail 
+            },
+            ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+            user_agent: req.headers.get('user-agent')
+          })
 
         return new Response(
           JSON.stringify({ message: 'Report status updated successfully', report: updatedReport }),
@@ -196,7 +191,7 @@ Deno.serve(async (req: Request) => {
       case 'add_notes':
         if (!reportId || !notes) throw new Error('Report ID and notes required')
 
-        // Add admin notes to report
+        // Add admin notes using SERVICE ROLE
         const { data: notedReport, error: notesError } = await supabaseClient
           .from('user_reports')
           .update({ admin_notes: notes })
@@ -206,14 +201,19 @@ Deno.serve(async (req: Request) => {
 
         if (notesError) throw notesError
 
-        // Log admin action
-        await supabaseClient.rpc('log_admin_action', {
-          action_type: 'report_notes_added',
-          action_details: { 
-            report_id: reportId,
-            admin_email: user.email 
-          }
-        })
+        // Log admin action using SERVICE ROLE
+        await supabaseClient
+          .from('admin_logs')
+          .insert({
+            admin_id: adminUser.id,
+            action: 'report_notes_added',
+            details: { 
+              report_id: reportId,
+              admin_email: adminEmail 
+            },
+            ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+            user_agent: req.headers.get('user-agent')
+          })
 
         return new Response(
           JSON.stringify({ message: 'Notes added successfully', report: notedReport }),

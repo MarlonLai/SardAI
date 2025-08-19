@@ -8,6 +8,7 @@ const corsHeaders = {
 
 interface StatsRequest {
   refresh?: boolean
+  adminEmail: string
 }
 
 Deno.serve(async (req: Request) => {
@@ -17,68 +18,47 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Create Supabase client
+    // Create Supabase client with SERVICE ROLE ONLY
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get the authorization header
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('No authorization header')
-    }
-
-    // Verify the user is authenticated
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
-    
-    if (authError || !user) {
-      throw new Error('Authentication failed')
-    }
-
-    // Check if user is admin
-    const { data: profile, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || profile?.role !== 'admin' || user.email !== 'marlon.lai@hotmail.com') {
-      const adminEmails = ['marlon.lai@hotmail.com', 'riccardo.lai@example.com']
-      if (profileError || profile?.role !== 'admin' || !adminEmails.includes(user.email)) {
-        throw new Error('Access denied. Only authorized admins can access this function.')
-      }
-    }
-
     // Parse request body
-    const { refresh = false }: StatsRequest = await req.json()
+    const { refresh = false, adminEmail }: StatsRequest = await req.json()
 
-    // Get admin stats using the database function
+    if (!adminEmail) {
+      throw new Error('Admin email is required')
+    }
+
+    // SERVER-SIDE ADMIN VERIFICATION - Only check for super admin
+    if (adminEmail !== 'marlon.lai@hotmail.com') {
+      throw new Error('Access denied. Only marlon.lai@hotmail.com can access admin statistics.')
+    }
+
+    // Get admin user for logging
+    const { data: adminUsers } = await supabaseClient.auth.admin.listUsers()
+    const adminUser = adminUsers.users.find(u => u.email === adminEmail)
+
+    // Get stats using SERVICE ROLE - direct database access
     const { data: stats, error: statsError } = await supabaseClient
       .rpc('get_admin_stats')
 
     if (statsError) throw statsError
 
-    // Get additional data for dashboard
+    // Get additional data using SERVICE ROLE
     const { data: activeUsersData, error: activeUsersError } = await supabaseClient
       .rpc('get_active_users_count', { days_back: 7 })
 
     const activeUsers = activeUsersError ? 0 : (activeUsersData || 0)
 
-    // Get user growth data for chart (last 30 days)
+    // Get user growth data using SERVICE ROLE
     const { data: userGrowthData, error: userGrowthError } = await supabaseClient
       .rpc('get_user_growth_data', { days_back: 30 })
 
     const userGrowth = userGrowthError ? [] : (userGrowthData || [])
 
-    // Get recent activity (last 10 admin actions)
+    // Get recent activity using SERVICE ROLE
     const { data: recentActivity, error: recentActivityError } = await supabaseClient
       .from('admin_logs')
       .select(`
@@ -92,10 +72,10 @@ Deno.serve(async (req: Request) => {
 
     if (recentActivityError) throw recentActivityError
 
-    // Enrich recent activity with admin details
+    // Enrich recent activity with admin details using SERVICE ROLE
     const enrichedActivity = await Promise.all((recentActivity || []).map(async (activity) => {
       if (activity.admin_id) {
-        const { data: adminUser } = await supabaseClient.auth.admin.getUserById(activity.admin_id)
+        const { data: adminUserData } = await supabaseClient.auth.admin.getUserById(activity.admin_id)
         const { data: adminProfile } = await supabaseClient
           .from('profiles')
           .select('full_name')
@@ -104,7 +84,7 @@ Deno.serve(async (req: Request) => {
         
         return {
           ...activity,
-          admin_email: adminUser?.user?.email,
+          admin_email: adminUserData?.user?.email,
           admin_name: adminProfile?.full_name
         }
       }
@@ -125,11 +105,18 @@ Deno.serve(async (req: Request) => {
       lastUpdated: stats.updated_at || new Date().toISOString()
     }
 
-    // Log admin action
-    await supabaseClient.rpc('log_admin_action', {
-      action_type: 'stats_viewed',
-      action_details: { refresh }
-    })
+    // Log admin action using SERVICE ROLE
+    if (adminUser) {
+      await supabaseClient
+        .from('admin_logs')
+        .insert({
+          admin_id: adminUser.id,
+          action: 'stats_viewed',
+          details: { refresh },
+          ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+          user_agent: req.headers.get('user-agent')
+        })
+    }
 
     return new Response(
       JSON.stringify(finalStats),
@@ -141,15 +128,9 @@ Deno.serve(async (req: Request) => {
 
   } catch (error) {
     console.error('Admin stats error:', error)
-    const message = (error?.message && error.message.trim()) || 
-                   (error && typeof error === 'object' ? JSON.stringify(error) : String(error)) || 
-                   'Failed to fetch admin statistics'
     
     return new Response(
-      JSON.stringify({
-        error: message,
-        fullError: error || 'No error details available'
-      }),
+      JSON.stringify({ error: error.message }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400 
