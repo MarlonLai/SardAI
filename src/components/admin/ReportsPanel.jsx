@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { 
   Flag,
@@ -33,6 +34,7 @@ export default function ReportsPanel() {
   const [loading, setLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState(null);
   const [adminNotes, setAdminNotes] = useState('');
+  const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -43,7 +45,7 @@ export default function ReportsPanel() {
     try {
       setLoading(true);
       const { data, error } = await supabase.functions.invoke('admin-reports', {
-        body: { action: 'list' }
+        body: { action: 'list', adminEmail: user?.email }
       });
 
       if (error) throw error;
@@ -66,7 +68,8 @@ export default function ReportsPanel() {
           action: 'update_status', 
           reportId, 
           status: newStatus,
-          notes: adminNotes 
+          notes: adminNotes,
+          adminEmail: user?.email
         }
       });
 

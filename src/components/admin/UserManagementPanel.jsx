@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { 
   Search,
@@ -32,6 +33,7 @@ export default function UserManagementPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const USERS_PER_PAGE = 20;
@@ -48,7 +50,8 @@ export default function UserManagementPanel() {
           action: 'list',
           limit: USERS_PER_PAGE,
           offset: currentPage * USERS_PER_PAGE,
-          search: searchTerm || null
+          search: searchTerm || null,
+          adminEmail: user?.email
         }
       });
 
@@ -68,7 +71,7 @@ export default function UserManagementPanel() {
   const handleAction = async (action, userId, email = null) => {
     try {
       const { data, error } = await supabase.functions.invoke('admin-user-management', {
-        body: { action, userId, email }
+        body: { action, userId, email, adminEmail: user?.email }
       });
       
       if (error) throw error;

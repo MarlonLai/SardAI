@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { 
   FileText,
@@ -24,6 +25,7 @@ export default function SystemLogsPanel() {
   const [loading, setLoading] = useState({ admin: true, system: true });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('');
+  const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -38,7 +40,8 @@ export default function SystemLogsPanel() {
         body: { 
           type: 'admin',
           search: searchTerm || null,
-          limit: 100
+          limit: 100,
+          adminEmail: user?.email
         }
       });
 
@@ -63,7 +66,8 @@ export default function SystemLogsPanel() {
           type: 'system',
           level: selectedLevel || null,
           search: searchTerm || null,
-          limit: 100
+          limit: 100,
+          adminEmail: user?.email
         }
       });
 

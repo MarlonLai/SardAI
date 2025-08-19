@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { 
   Users, 
@@ -21,6 +22,7 @@ export default function AdminStats() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -36,7 +38,7 @@ export default function AdminStats() {
       }
       
       const { data, error } = await supabase.functions.invoke('admin-stats', {
-        body: { refresh }
+        body: { refresh, adminEmail: user?.email }
       });
 
       if (error) throw error;

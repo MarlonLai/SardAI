@@ -12,6 +12,7 @@ interface LogsRequest {
   offset?: number
   level?: string
   search?: string
+  adminEmail: string
 }
 
 Deno.serve(async (req: Request) => {
@@ -21,51 +22,31 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Create Supabase client
+    // Create Supabase client with SERVICE ROLE ONLY
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get the authorization header
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('No authorization header')
-    }
-
-    // Verify the user is authenticated
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
-    
-    if (authError || !user) {
-      throw new Error('Authentication failed')
-    }
-
-    // Check if user is admin
-    const { data: profile, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || profile?.role !== 'admin' || user.email !== 'marlon.lai@hotmail.com') {
-      const adminEmails = ['marlon.lai@hotmail.com', 'riccardo.lai@example.com']
-      if (profileError || profile?.role !== 'admin' || !adminEmails.includes(user.email)) {
-        throw new Error('Access denied. Only authorized admins can access this function.')
-      }
-    }
-
     // Parse request body
-    const { type, limit = 100, offset = 0, level, search }: LogsRequest = await req.json()
+    const { type, limit = 100, offset = 0, level, search, adminEmail }: LogsRequest = await req.json()
+
+    if (!adminEmail) {
+      throw new Error('Admin email is required')
+    }
+
+    // SERVER-SIDE ADMIN VERIFICATION - Only check for authorized admins
+    const authorizedAdmins = ['marlon.lai@hotmail.com', 'riccardo.lai@example.com']
+    if (!authorizedAdmins.includes(adminEmail)) {
+      throw new Error('Access denied. Only authorized administrators can access logs.')
+    }
+
+    // Get admin user for logging
+    const { data: adminUsers } = await supabaseClient.auth.admin.listUsers()
+    const adminUser = adminUsers.users.find(u => u.email === adminEmail)
 
     if (type === 'admin') {
-      // Get admin logs with manual joins
+      // Get admin logs using SERVICE ROLE
       let query = supabaseClient
         .from('admin_logs')
         .select(`
@@ -89,13 +70,13 @@ Deno.serve(async (req: Request) => {
 
       if (adminLogsError) throw adminLogsError
 
-      // Manually fetch admin and target user details
+      // Manually fetch admin and target user details using SERVICE ROLE
       const enrichedLogs = await Promise.all((adminLogs || []).map(async (log) => {
         const enrichedLog = { ...log }
 
         // Get admin details
         if (log.admin_id) {
-          const { data: adminUser } = await supabaseClient.auth.admin.getUserById(log.admin_id)
+          const { data: adminUserData } = await supabaseClient.auth.admin.getUserById(log.admin_id)
           const { data: adminProfile } = await supabaseClient
             .from('profiles')
             .select('full_name')
@@ -103,7 +84,7 @@ Deno.serve(async (req: Request) => {
             .single()
           
           enrichedLog.admin = {
-            email: adminUser?.user?.email,
+            email: adminUserData?.user?.email,
             full_name: adminProfile?.full_name
           }
         }
@@ -135,7 +116,7 @@ Deno.serve(async (req: Request) => {
       )
 
     } else if (type === 'system') {
-      // Get system logs with manual joins
+      // Get system logs using SERVICE ROLE
       let query = supabaseClient
         .from('system_logs')
         .select(`
@@ -161,7 +142,7 @@ Deno.serve(async (req: Request) => {
 
       if (systemLogsError) throw systemLogsError
 
-      // Manually fetch user details
+      // Manually fetch user details using SERVICE ROLE
       const enrichedLogs = await Promise.all((systemLogs || []).map(async (log) => {
         const enrichedLog = { ...log }
 
