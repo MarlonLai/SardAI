@@ -97,25 +97,30 @@ Deno.serve(async (req: Request) => {
       case 'delete':
         if (!userId) throw new Error('User ID required for delete action')
 
-        // Get user info before deletion for logging
-        const { data: userToDelete } = await supabaseClient.auth.admin.getUserById(userId)
-        
-        // Delete user
-        const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(userId)
-        if (deleteError) throw deleteError
+        // Use the safe delete function that handles all constraints properly
+        const { data: deleteResult, error: deleteError } = await supabaseClient
+          .rpc('safe_delete_user', {
+            target_user_id: userId,
+            admin_user_id: user.id
+          })
 
-        // Log admin action
-        await supabaseClient.rpc('log_admin_action', {
-          action_type: 'user_deleted',
-          target_user: userId,
-          action_details: { 
-            deleted_email: userToDelete?.user?.email,
-            admin_email: user.email 
-          }
-        })
+        if (deleteError) {
+          console.error('Safe delete error:', deleteError)
+          throw new Error(`Failed to delete user: ${deleteError.message}`)
+        }
+
+        // Now delete from auth.users (this should work since all FK constraints are resolved)
+        const { error: authDeleteError } = await supabaseClient.auth.admin.deleteUser(userId)
+        if (authDeleteError) {
+          console.error('Auth delete error:', authDeleteError)
+          throw new Error(`Failed to delete auth user: ${authDeleteError.message}`)
+        }
 
         return new Response(
-          JSON.stringify({ message: 'User deleted successfully' }),
+          JSON.stringify({ 
+            message: 'User deleted successfully',
+            result: deleteResult
+          }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200 

@@ -128,26 +128,30 @@ Deno.serve(async (req: Request) => {
           throw new Error('User ID is required')
         }
 
-        // Get user info before deletion
-        const { data: userToDelete } = await supabaseClient.auth.admin.getUserById(userId)
+        // Use the safe delete function
+        const { data: deleteResult, error: deleteError } = await supabaseClient
+          .rpc('safe_delete_user', {
+            target_user_id: userId,
+            admin_user_id: user.id
+          })
 
-        // Delete auth user
-        const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(userId)
-        
-        if (deleteError) throw deleteError
+        if (deleteError) {
+          console.error('Safe delete error:', deleteError)
+          throw new Error(`Failed to delete user: ${deleteError.message}`)
+        }
 
-        // Log admin action
-        await supabaseClient.rpc('log_admin_action', {
-          action_type: 'auth_user_deleted',
-          target_user: userId,
-          action_details: { 
-            deleted_email: userToDelete?.user?.email,
-            admin_email: user.email 
-          }
-        })
+        // Now delete from auth.users
+        const { error: authDeleteError } = await supabaseClient.auth.admin.deleteUser(userId)
+        if (authDeleteError) {
+          console.error('Auth delete error:', authDeleteError)
+          throw new Error(`Failed to delete auth user: ${authDeleteError.message}`)
+        }
 
         return new Response(
-          JSON.stringify({ message: 'User deleted successfully' }),
+          JSON.stringify({ 
+            message: 'User deleted successfully',
+            result: deleteResult
+          }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200 
