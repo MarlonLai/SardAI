@@ -51,7 +51,10 @@ Deno.serve(async (req: Request) => {
       .single()
 
     if (profileError || profile?.role !== 'admin' || user.email !== 'marlon.lai@hotmail.com') {
-      throw new Error('Access denied. Only marlon.lai@hotmail.com with admin role can access this function.')
+      const adminEmails = ['marlon.lai@hotmail.com', 'riccardo.lai@example.com']
+      if (profileError || profile?.role !== 'admin' || !adminEmails.includes(user.email)) {
+        throw new Error('Access denied. Only authorized admins can access this function.')
+      }
     }
 
     // Parse request body
