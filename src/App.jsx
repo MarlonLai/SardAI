@@ -5,7 +5,6 @@ import { Helmet } from 'react-helmet';
 import { Toaster } from '@/components/ui/toaster';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { AuthProvider } from '@/contexts/AuthContext';
-import OfflineNotice from '@/components/OfflineNotice';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import LandingPage from '@/pages/LandingPage';
 import ChatPage from '@/pages/ChatPage';
@@ -50,7 +49,6 @@ function App() {
         </Helmet>
         
         <div className="min-h-screen flex flex-col">
-          <OfflineNotice />
           <Navigation />
           <main className="flex-grow">
             <Routes>
@@ -132,9 +130,11 @@ function App() {
         
         <Toaster />
       </Router>
-      </AuthProvider>
-    </ErrorBoundary>
+    </AuthProvider>
   );
 }
 
 export default App;
+
+  )
+}
