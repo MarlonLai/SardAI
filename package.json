@@ -10,9 +10,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
-    "test": "vitest",
-    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
     "coverage": "vitest --coverage"
   },
   "dependencies": {
