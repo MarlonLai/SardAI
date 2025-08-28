@@ -95,3 +95,5 @@ export const UserTableSkeleton = () => (
     ))}
   </div>
 );
+
+export const SkeletonLoader = DashboardSkeleton;
