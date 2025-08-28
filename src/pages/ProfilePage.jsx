@@ -11,7 +11,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import UserSettings from '@/components/UserSettings';
-import UserSettings from '@/components/UserSettings';
 import { 
   ArrowLeft, 
   User, 
@@ -21,7 +20,6 @@ import {
   Camera,
   Save,
   Shield,
-  Settings
   Settings
 } from 'lucide-react';
 
