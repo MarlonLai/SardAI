@@ -17,7 +17,19 @@ import {
   Home
 } from 'lucide-react';
 
-export default function Sidebar({ isOpen, onClose }) {
+import OptimizedSidebar from '@/components/OptimizedSidebar';
+
+// Keep original Sidebar as fallback, but use optimized version by default
+const Sidebar = React.memo(({ isOpen, onClose }) => {
+  return <OptimizedSidebar isOpen={isOpen} onClose={onClose} />;
+});
+
+Sidebar.displayName = 'Sidebar';
+
+export default Sidebar;
+
+// Original implementation as fallback
+export function OriginalSidebar({ isOpen, onClose }) {
   const { user, profile, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();

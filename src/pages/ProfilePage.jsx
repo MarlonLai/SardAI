@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
@@ -11,6 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
+import UserSettings from '@/components/UserSettings';
+import UserSettings from '@/components/UserSettings';
 import { 
   ArrowLeft, 
   User, 
@@ -19,13 +20,16 @@ import {
   Crown, 
   Camera,
   Save,
-  Shield
+  Shield,
+  Settings
+  Settings
 } from 'lucide-react';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { user, profile, updateProfile } = useAuth();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('profile');
   const [formData, setFormData] = useState({
     full_name: '',
     email: ''
@@ -125,6 +129,7 @@ export default function ProfilePage() {
               variant="ghost"
               onClick={() => navigate('/dashboard')}
               className="text-white hover:bg-white/10"
+              aria-label="Torna alla Dashboard"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Torna alla Dashboard
@@ -132,17 +137,51 @@ export default function ProfilePage() {
             
             <h1 className="text-2xl font-bold text-white">Il Mio Profilo</h1>
             
-            <div className="w-32"></div>
+            <div className="w-32" aria-hidden="true"></div>
           </div>
         </header>
 
         <div className="container mx-auto px-4 py-8">
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
             >
+              {/* Tab Navigation */}
+              <div className="flex justify-center mb-8">
+                <div className="bg-slate-800/50 p-1 rounded-lg border border-slate-600">
+                  <button
+                    onClick={() => setActiveTab('profile')}
+                    className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                      activeTab === 'profile' 
+                        ? 'bg-blue-600 text-white' 
+                        : 'text-gray-300 hover:text-white hover:bg-slate-700'
+                    }`}
+                    aria-pressed={activeTab === 'profile'}
+                    role="tab"
+                  >
+                    <User className="w-4 h-4 mr-2 inline" />
+                    Profilo
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('settings')}
+                    className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                      activeTab === 'settings' 
+                        ? 'bg-blue-600 text-white' 
+                        : 'text-gray-300 hover:text-white hover:bg-slate-700'
+                    }`}
+                    aria-pressed={activeTab === 'settings'}
+                    role="tab"
+                  >
+                    <Settings className="w-4 h-4 mr-2 inline" />
+                    Impostazioni
+                  </button>
+                </div>
+              </div>
+
+              {activeTab === 'profile' && (
+                <>
               {/* Profile Header */}
               <Card className="sardinian-card mb-8">
                 <CardHeader className="text-center">
@@ -160,6 +199,7 @@ export default function ProfilePage() {
                     >
                       <Label htmlFor="avatar-upload">
                         <Camera className="w-4 h-4" />
+                        <span className="sr-only">Carica nuova immagine profilo</span>
                         <input
                           id="avatar-upload"
                           type="file"
@@ -167,6 +207,7 @@ export default function ProfilePage() {
                           onChange={handleAvatarUpload}
                           disabled={uploading}
                           className="hidden"
+                          aria-label="Seleziona file immagine per il profilo"
                         />
                       </Label>
                     </Button>
@@ -218,7 +259,11 @@ export default function ProfilePage() {
                         value={formData.full_name}
                         onChange={handleChange}
                         className="bg-slate-800/50 border-slate-600 text-white"
+                        aria-describedby="name-description"
                       />
+                      <p id="name-description" className="text-gray-400 text-sm mt-1">
+                        Il nome che verrà mostrato nelle conversazioni
+                      </p>
                     </div>
 
                     <div className="space-y-2">
@@ -232,13 +277,18 @@ export default function ProfilePage() {
                         value={formData.email}
                         disabled
                         className="bg-slate-800/50 border-slate-600 text-white disabled:opacity-70"
+                        aria-describedby="email-description"
                       />
+                      <p id="email-description" className="text-gray-400 text-sm mt-1">
+                        L'email non può essere modificata per motivi di sicurezza
+                      </p>
                     </div>
 
                     <Button
                       type="submit"
                       disabled={loading || uploading}
                       className="w-full sardinian-gradient hover:opacity-90"
+                      aria-label="Salva le modifiche al profilo"
                     >
                       <Save className="w-4 h-4 mr-2" />
                       {loading ? 'Salvataggio...' : 'Salva Modifiche'}
@@ -298,6 +348,12 @@ export default function ProfilePage() {
                     </Button>
                   </CardContent>
                 </Card>
+              )}
+                </>
+              )}
+              
+              {activeTab === 'settings' && (
+                <UserSettings />
               )}
             </motion.div>
           </div>

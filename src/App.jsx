@@ -5,20 +5,24 @@ import { Toaster } from '@/components/ui/toaster';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { 
+  LazyWrapper, 
+  LazyPageWrapper, 
+  LazyChatPage,
+  LazyAdminPage, 
+  LazySubscriptionPage,
+  LazyPremiumFeaturesPage,
+  LazyProfilePage
+} from '@/components/optimized/LazyComponents';
 import LandingPage from '@/pages/LandingPage';
-import ChatPage from '@/pages/ChatPage';
 import LoginPage from '@/pages/LoginPage.jsx';
 import RegisterPage from '@/pages/RegisterPage.jsx';
 import DashboardPage from '@/pages/DashboardPage.jsx';
-import ProfilePage from '@/pages/ProfilePage.jsx';
-import SubscriptionPage from '@/pages/SubscriptionPage.jsx';
-import AdminPage from '@/pages/AdminPage.jsx';
 import AdminRoute from '@/components/AdminRoute';
 import NotFoundPage from '@/pages/NotFoundPage.jsx';
 import GdprPage from '@/pages/GdprPage.jsx';
 import TermsPage from '@/pages/TermsPage.jsx';
 import PrivacyPage from '@/pages/PrivacyPage.jsx';
-import PremiumFeaturesPage from '@/pages/PremiumFeaturesPage.jsx';
 import ErrorPage from '@/pages/auth/ErrorPage.jsx';
 import SuccessPage from '@/pages/auth/SuccessPage.jsx';
 import ResetPasswordPage from '@/pages/auth/ResetPasswordPage.jsx';
@@ -31,8 +35,9 @@ import PaymentErrorPage from '@/pages/stripe/PaymentErrorPage.jsx';
 import SubscriptionManagePage from '@/pages/stripe/SubscriptionManagePage.jsx';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer.jsx';
+import OfflineNotice from '@/components/OfflineNotice';
 
-function App() {
+const App = React.memo(() => {
   return (
     <ErrorBoundary showDetails={false}>
       <AuthProvider>
@@ -49,6 +54,7 @@ function App() {
           
           <div className="min-h-screen flex flex-col">
             <Navigation />
+            <OfflineNotice />
             <main className="flex-grow">
               <Routes>
                 <Route path="/" element={<LandingPage />} />
@@ -57,7 +63,11 @@ function App() {
                 <Route path="/gdpr" element={<GdprPage />} />
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
-                <Route path="/features" element={<PremiumFeaturesPage />} />
+                <Route path="/features" element={
+                  <LazyPageWrapper>
+                    <LazyPremiumFeaturesPage />
+                  </LazyPageWrapper>
+                } />
                 
                 {/* Auth Routes */}
                 <Route path="/auth/error" element={<ErrorPage />} />
@@ -85,7 +95,9 @@ function App() {
                   path="/chat" 
                   element={
                     <ProtectedRoute>
-                      <ChatPage />
+                      <LazyPageWrapper>
+                        <LazyChatPage />
+                      </LazyPageWrapper>
                     </ProtectedRoute>
                   } 
                 />
@@ -101,7 +113,9 @@ function App() {
                   path="/profile" 
                   element={
                     <ProtectedRoute>
-                      <ProfilePage />
+                      <LazyPageWrapper>
+                        <LazyProfilePage />
+                      </LazyPageWrapper>
                     </ProtectedRoute>
                   } 
                 />
@@ -109,7 +123,9 @@ function App() {
                   path="/subscription" 
                   element={
                     <ProtectedRoute>
-                      <SubscriptionPage />
+                      <LazyPageWrapper>
+                        <LazySubscriptionPage />
+                      </LazyPageWrapper>
                     </ProtectedRoute>
                   } 
                 />
@@ -117,7 +133,9 @@ function App() {
                   path="/admin"
                   element={
                     <AdminRoute>
-                      <AdminPage />
+                      <LazyPageWrapper>
+                        <LazyAdminPage />
+                      </LazyPageWrapper>
                     </AdminRoute>
                   }
                 />
@@ -132,6 +150,8 @@ function App() {
       </AuthProvider>
     </ErrorBoundary>
   );
-}
+});
+
+App.displayName = 'App';
 
 export default App;

@@ -141,6 +141,9 @@ export default function Navigation() {
             size="icon"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden text-white hover:bg-white/10"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-menu"
+            aria-label="Menu mobile"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
@@ -155,10 +158,14 @@ export default function Navigation() {
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
               className="md:hidden border-t border-white/10 py-4"
+              id="mobile-menu"
+              role="menu"
             >
-              <div className="space-y-2">
+              <div className="space-y-2" role="none">
                 {filteredItems.map((item) => (
-                  <NavLink key={item.path} item={item} mobile />
+                  <div key={item.path} role="menuitem">
+                    <NavLink item={item} mobile />
+                  </div>
                 ))}
                 
                 {user ? (
