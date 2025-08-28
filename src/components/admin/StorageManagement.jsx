@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { useStorageUpload } from '@/hooks/useStorageUpload';
+import { formatDate, formatFileSize } from '@/utils/formatters';
 import { 
   HardDrive,
   Image,

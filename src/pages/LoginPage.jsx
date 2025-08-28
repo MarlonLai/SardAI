@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import { validateEmail } from '@/utils/validation';
 import { Sparkles, Mail, Lock, ArrowLeft } from 'lucide-react';
 import {
   AlertDialog,
@@ -34,6 +35,27 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate email
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.isValid) {
+      toast({
+        title: "Errore",
+        description: emailValidation.error,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!formData.password) {
+      toast({
+        title: "Errore",
+        description: "La password è obbligatoria",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setLoading(true);
 
     const result = await login(formData.email, formData.password);

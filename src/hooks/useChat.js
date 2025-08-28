@@ -3,6 +3,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { useMessageLimits } from '@/hooks/useMessageLimits';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 export const useChat = () => {
   const [sessions, setSessions] = useState([]);
@@ -12,6 +13,7 @@ export const useChat = () => {
   const [planStatus, setPlanStatus] = useState(null);
   const { user, profile } = useAuth();
   const { toast } = useToast();
+  const { handleError } = useErrorHandler();
   const { 
     limits, 
     incrementMessageCount, 
@@ -46,12 +48,7 @@ export const useChat = () => {
       if (error) throw error;
       setSessions(data || []);
     } catch (error) {
-      console.error('Error fetching sessions:', error);
-      toast({
-        title: "Errore",
-        description: "Impossibile caricare le sessioni di chat.",
-        variant: "destructive",
-      });
+      handleError(error, "Impossibile caricare le sessioni di chat.");
     }
   }, [user, toast]);
 
@@ -69,12 +66,7 @@ export const useChat = () => {
       if (error) throw error;
       setMessages(data || []);
     } catch (error) {
-      console.error('Error fetching messages:', error);
-      toast({
-        title: "Errore",
-        description: "Impossibile caricare i messaggi.",
-        variant: "destructive",
-      });
+      handleError(error, "Impossibile caricare i messaggi.");
     }
   }, [toast]);
 

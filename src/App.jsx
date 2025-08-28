@@ -3,7 +3,9 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { Toaster } from '@/components/ui/toaster';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { AuthProvider } from '@/contexts/AuthContext';
+import OfflineNotice from '@/components/OfflineNotice';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import LandingPage from '@/pages/LandingPage';
 import ChatPage from '@/pages/ChatPage';
@@ -34,8 +36,9 @@ import Footer from '@/components/Footer.jsx';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <ErrorBoundary showDetails={false}>
+      <AuthProvider>
+        <Router>
         <Helmet>
           <title>SardAI - Assistente Virtuale Sardo</title>
           <meta name="description" content="L'assistente virtuale che parla sardo. Scopri la cultura sarda attraverso l'intelligenza artificiale con modalità gratuita e premium." />
@@ -47,6 +50,7 @@ function App() {
         </Helmet>
         
         <div className="min-h-screen flex flex-col">
+          <OfflineNotice />
           <Navigation />
           <main className="flex-grow">
             <Routes>
@@ -128,7 +132,8 @@ function App() {
         
         <Toaster />
       </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -16,8 +16,20 @@ export default function PaymentProcessingPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [dots, setDots] = useState('');
+  const [countdown, setCountdown] = useState(30);
 
   useEffect(() => {
+    // Countdown timer
+    const countdownTimer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownTimer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
     // Animated dots for loading effect
     const dotsTimer = setInterval(() => {
       setDots(prev => prev.length >= 3 ? '' : prev + '.');

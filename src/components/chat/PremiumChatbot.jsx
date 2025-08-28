@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Send, Crown, User, Loader2, Sparkles } from 'lucide-react';
+import { validateChatMessage } from '@/utils/validation';
 
 export default function PremiumChatbot({ messages, onSendMessage, loading, isAdmin = false }) {
   const [message, setMessage] = useState('');
@@ -22,9 +23,16 @@ export default function PremiumChatbot({ messages, onSendMessage, loading, isAdm
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!message.trim() || loading) return;
+    
+    // Validate message
+    const validation = validateChatMessage(message);
+    if (!validation.isValid) {
+      return;
+    }
+    
+    if (loading) return;
 
-    const result = await onSendMessage(message, 'premium');
+    const result = await onSendMessage(validation.sanitizedMessage, 'premium');
     if (result?.success) {
       setMessage('');
     }

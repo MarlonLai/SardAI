@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import { validateEmail, validatePassword, validateName } from '@/utils/validation';
 import { Sparkles, Mail, Lock, User, ArrowLeft, Eye, EyeOff, CheckCircle, Send } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -29,6 +30,37 @@ export default function RegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validate all fields
+    const nameValidation = validateName(formData.name);
+    if (!nameValidation.isValid) {
+      toast({
+        title: "Errore",
+        description: nameValidation.error,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.isValid) {
+      toast({
+        title: "Errore",
+        description: emailValidation.error,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const passwordValidation = validatePassword(formData.password);
+    if (!passwordValidation.isValid) {
+      toast({
+        title: "Errore",
+        description: passwordValidation.error,
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Validation
     if (formData.password !== formData.confirmPassword) {
       toast({

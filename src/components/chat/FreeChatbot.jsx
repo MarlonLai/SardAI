@@ -8,6 +8,7 @@ import { Send, Bot, User, Loader2 } from 'lucide-react';
 import MessageLimitIndicator from '@/components/chat/MessageLimitIndicator';
 import MessageLimitBlocker from '@/components/chat/MessageLimitBlocker';
 import { useMessageLimits } from '@/hooks/useMessageLimits';
+import { validateChatMessage } from '@/utils/validation';
 
 export default function FreeChatbot({ messages, onSendMessage, loading, planStatus, limits, isLimitReached }) {
   const [message, setMessage] = useState('');
@@ -24,13 +25,20 @@ export default function FreeChatbot({ messages, onSendMessage, loading, planStat
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!message.trim() || loading) return;
+    
+    // Validate message
+    const validation = validateChatMessage(message);
+    if (!validation.isValid) {
+      return;
+    }
+    
+    if (loading) return;
 
     // Check limits before sending
     if (isLimitReached) {
       return;
     }
-    const result = await onSendMessage(message, 'free');
+    const result = await onSendMessage(validation.sanitizedMessage, 'free');
     if (result?.success) {
       setMessage('');
     }
